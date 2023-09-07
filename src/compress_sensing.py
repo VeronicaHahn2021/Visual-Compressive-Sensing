@@ -257,7 +257,6 @@ def fourier_reconstruct(W, y, alpha, sample_sz, n, m, fit_intercept) :
     ## Initialize Lasso and Fit data
     mini = Lasso(alpha = alpha, fit_intercept = fit_intercept)
     mini.fit(theta, y)
-
     ## Retrieve sparse vector s
     s = mini.coef_
     img = fft.idctn(s.reshape(n, m), norm='ortho', axes=[0,1])
@@ -712,7 +711,7 @@ def large_img_experiment(img_arr, num_cell, cell_size = None,
         if (cur_m >= padding_m) :
             cur_n += filt_n
             cur_m = 0
-        print(f"{pt} of {num_work}")
+        # print(f"{pt} of {num_work}")
         # Compute the end of column for each batch, which is also
         # going to be the start point of next batch
         nxt_m = cur_m + filt_m

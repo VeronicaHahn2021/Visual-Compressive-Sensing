@@ -53,6 +53,10 @@ def add_colorbar_args(parser):
         help='[Colorbar Figure] : Method you would like' +
         ' to use for reconstruction',
         metavar='NUM_CELLS', required=False, nargs=1)
+    parser.add_argument(
+        '-fixed_weights', action ='store_true',
+        help='[Colorbar Figure and Hyperparam Sweep] : fix weights from start or randomly generate',
+        required=False)
     
 
 def eval_colorbar_args(args, parser):
@@ -114,6 +118,7 @@ def eval_colorbar_args(args, parser):
     img_name = args.img_name[0] if args.img_name is not None else None
     observation = args.observation[0] if args.observation is not None else None
     color = args.color
+    fixed_weights = args.fixed_weights
     num_cells = eval(args.num_cells[0]) if args.num_cells is not None else None
     if None in [method, img_name, observation, num_cells]:
         parser.error('[Colorbar Figure] : at least method, img_name, '+
@@ -142,7 +147,7 @@ def eval_colorbar_args(args, parser):
     sparse_freq = eval(args.sparse_freq[0]) \
         if args.sparse_freq is not None else None
     return method, img_name, observation, color, dwt_type, level, alpha,\
-        num_cells, cell_size, sparse_freq
+        num_cells, cell_size, sparse_freq, fixed_weights
 
 
 def add_plot_args(parser):
@@ -298,6 +303,7 @@ def add_generic_figure_args(parser):
         'when argument is present',
         required=False)
 
+    
 def parse_figure_args():
     '''
     Parse the command line args for the figure library
@@ -375,9 +381,9 @@ def parse_sweep_args():
     add_sweep_args(parser)
     args = parser.parse_args()
     method, img_name, observation, color, dwt_type, level, alpha_list, \
-        num_cells, cell_size, sparse_freq = eval_sweep_args(args, parser)
+        num_cells, cell_size, sparse_freq, fixed_weights = eval_sweep_args(args, parser)
     return method, img_name, observation, color, dwt_type, \
-        level, alpha_list, num_cells, cell_size, sparse_freq
+        level, alpha_list, num_cells, cell_size, sparse_freq, fixed_weights
 
 def add_sweep_args(parser):
     '''
@@ -408,7 +414,7 @@ def add_sweep_args(parser):
     parser.add_argument(
         '-color', action='store_true', 
         help='Color mode of reconstruction',
-        required=True)
+        required=False)
     # add hyperparams REQUIRED for dwt ONLY
     parser.add_argument(
         '-dwt_type', choices=wavelist, action='store', 
@@ -436,7 +442,11 @@ def add_sweep_args(parser):
         '-num_cells', action='store', 
         help='Method you would like to use for reconstruction',
         metavar='NUM_CELLS', required=True, nargs="+")
-
+    parser.add_argument(
+        '-fixed_weights', action ='store_true',
+        help='[Colorbar Figure and Hyperparam Sweep] : fix weights from start or randomly generate',
+        required=False)
+    
 def eval_sweep_args(args, parser):
     '''
     Evaluate the colorbar arguments to 
@@ -495,6 +505,8 @@ def eval_sweep_args(args, parser):
     img_name = args.img_name[0]
     observation = args.observation[0]
     color = args.color
+    fixed_weights = args.fixed_weights
+
     # deal with missing or unneccessary command line args
     if method == "dwt" and (args.dwt_type is None
                             or args.level is None):
@@ -517,6 +529,5 @@ def eval_sweep_args(args, parser):
         if args.cell_size is not None else None
     sparse_freq = [eval(i) for i in args.sparse_freq] \
         if args.sparse_freq is not None else None
-
     return method, img_name, observation, color, dwt_type, level, alpha_list, \
-        num_cells, cell_size, sparse_freq
+        num_cells, cell_size, sparse_freq, fixed_weights

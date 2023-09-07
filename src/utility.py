@@ -124,7 +124,7 @@ def data_save_path(img_nm, method, observation, save_nm):
         save_nm = save_nm + "_".join(
             str.split(time.ctime().replace(":", "_"))) + '.csv'  
     
-    result_path = os.path.join(root, f"result/{method}/{img_nm}/{observatin, m, on}")
+    result_path = os.path.join(root, f"result/{method}/{img_nm}/{observation}")
     Path(result_path).mkdir(parents=True, exist_ok = True)
     
     return os.path.join(result_path, save_nm)
