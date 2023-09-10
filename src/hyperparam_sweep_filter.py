@@ -67,7 +67,7 @@ def run_sweep(method, img, observation, color, dwt_type, lv,
 
 
     delay_list = []
-    rep = np.arange(5)
+    rep = np.arange(10)
     image_nm = img.split('.')[0]
     img_arr = process_image(img, color)
     print(fixed_weights)
@@ -115,10 +115,9 @@ def run_sweep(method, img, observation, color, dwt_type, lv,
                 sparse_freq: run_sim_V1_dwt(method, observation, color,
                                             dwt_type, lv, alp, num_cell,
                                             cell_size, sparse_freq, img_arr, fixed_weights)
-    else: 
-         print(f"The observation {observation} is currently not supported.")
-         print(" Please try valid observation type.")
-
+        else:
+            print(f"The observation {observation} is currently not supported.")
+            print(" Please try valid observation type.")
     for p in search_df.values:
         delay = dask.delayed(sim_wrapper)(*p)
         delay_list.append(delay)
