@@ -205,7 +205,8 @@ def run_sim_dwt(method, observation, color, dwt_type,
     img_arr = np.array([img_arr]).squeeze()
     reconst = large_img_experiment(img_arr, num_cell = num_cell, alpha = alpha,
                                    method = method, observation = observation,
-                                   color = color, lv = lv, dwt_type = dwt_type, fixed_weights=fixed_weights)
+                                   color = color, lv = lv, dwt_type = dwt_type, 
+                                   fixed_weights=fixed_weights)
 
     # Call function and calculate error
     error = error_calculation(img_arr, reconst)

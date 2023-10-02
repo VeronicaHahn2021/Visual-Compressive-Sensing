@@ -18,7 +18,7 @@ from PIL import Image, ImageOps
 
 
 # Generate General Variables
-def generate_Y(W, img_arr, observation, rand_index = None):
+def generate_Y(W, img_arr):
     ''' 
     Generate sample y vector variable for data reconstruction using constant
     matrix W (containing open indices).
@@ -40,19 +40,7 @@ def generate_Y(W, img_arr, observation, rand_index = None):
     
     '''
     num_cells, n, m = W.shape
-    if observation == 'V1':
-        y = generate_v1_y(img_arr, W)
-    elif observation == 'gaussian':
-        y = generate_gaussian_y(W, img_arr)
-    elif observation == 'pixel':
-        y = generate_pixel_y(img_arr, rand_index, num_cells)
-    return y
-
-def generate_v1_y(img_arr, W):
-    # Get size of image
-    num_cell = W.shape[0]
-    n, m = img_arr.shape[:2]
-    W = W.reshape(num_cell, n*m)
+    W = W.reshape(num_cells, n*m)
     y = W @ img_arr.reshape(n * m, 1)
     return y
 
@@ -100,15 +88,9 @@ def generate_V1_observation(img_arr, num_cell, cell_size, sparse_freq):
     dim = np.asanyarray(img_arr).shape[:2]
     W = generate_V1_weights(num_cell, dim, cell_size, sparse_freq)
     # Retrieve y from W @ imgArr
-    y = generate_Y(W, img_arr, 'V1')
-    # y = W @ img_arr.reshape(n*m, 1)
+    y = generate_Y(W, img_arr)
     return W, y
 
-def generate_pixel_y(img_arr, rand_index, num_cell):
-    y = img_arr.flatten()[rand_index].reshape(num_cell, 1)
-    n, m = img_arr.shape[:2]
-    y = y * np.sqrt(n * m)
-    return y
 
 def generate_pixel_weights(num_cell, n, m, rand_index):
     W = np.eye(n * m)[rand_index, :] * np.sqrt(n * m)
@@ -141,15 +123,8 @@ def generate_pixel_observation(img_arr, num_cell) :
     n, m = img_arr.shape[:2]
     rand_index = np.random.randint(0, n * m, num_cell)
     W = generate_pixel_weights(num_cell, n, m, rand_index)
-    y = generate_Y(W, img_arr, 'pixel', rand_index)
+    y = generate_Y(W, img_arr)
     return W, y
-
-def generate_gaussian_y(W, img_arr):
-    num_cell = W.shape[0]
-    n, m = img_arr.shape[:2]
-    W = W.reshape(num_cell, n*m)
-    y = W @ img_arr.reshape(n * m, 1)
-    return y
 
 # Generate Gaussian Weights
 def generate_gaussian_weights(num_cell, n, m):
@@ -181,7 +156,7 @@ def generate_gaussian_observation(img_arr, num_cell):
     '''
     n, m = img_arr.shape[:2]
     W = generate_gaussian_weights(num_cell, n, m)
-    y = generate_Y(W, img_arr, 'gaussian')
+    y = generate_Y(W, img_arr)
     return W, y
 
 # Error Calculation by Frobenius Norm
@@ -527,7 +502,7 @@ def color_experiment(img_arr, num_cell, cell_size = None, sparse_freq = None,
         n_pt, m_pt = img_arr_pt_dim
         
         if W is not None:
-            y = generate_Y(W, img_arr_pt, observation, rand_index)
+            y = generate_Y(W, img_arr_pt)
         
         else :
             W, y = generate_observations(img_arr_pt, num_cell, observation,
@@ -738,7 +713,7 @@ def large_img_experiment(img_arr, num_cell, cell_size = None,
             
             # if fixed_weights == True, there is pre-set weight, so just compute y
             if fixed_weights == True:
-                y = generate_Y(W, img_arr_pt, observation, rand_index)
+                y = generate_Y(W, img_arr_pt)
             # else, all W is randomized for each batch of reconstruction
             else :
                 W, y = generate_observations(img_arr_pt, num_cell, observation,

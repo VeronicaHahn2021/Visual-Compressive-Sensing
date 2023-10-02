@@ -172,7 +172,7 @@ def error_vs_alpha(img, method, pixel_file, gaussian_file, V1_file, save = False
 
     #Pre-processing data to receive
     data = process_result_data(img, method, 'alp', pixel_file, gaussian_file, V1_file)
-    
+    print(data['V1'])
     plt.xticks(data['V1'][0]['alp'])
     plt.xlabel('alpha')
     title = f"Alpha_Vs_Error_{img_nm}_"
