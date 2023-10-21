@@ -217,6 +217,7 @@ def remove_unnamed_data(data):
         without unnecessary column.
     '''
     for index in data:
+        print(index)
         if (index == 'Unnamed: 0') :
             data.drop('Unnamed: 0', axis = 1, inplace=True)
     return data
@@ -231,8 +232,31 @@ def load_dataframe(img_nm, method, pixel_file=None,
     pixel_df = remove_unnamed_data(pd.read_csv(load_pixel))
     gaussian_df = remove_unnamed_data(pd.read_csv(load_gaussian))
     V1_df = remove_unnamed_data(pd.read_csv(load_V1))
-    
+
+    #    print(len(V1_df))
     return V1_df, gaussian_df, pixel_df
+
+def load_dataframe_new(img_nm, method, pixel_file=None,
+                        gaussian_file=None, V1_file=None) :
+    root = search_root()
+    load_V1 = f"{root}/result/{method}/{img_nm}/V1/{V1_file}"
+    load_gaussian = f"{root}/result/{method}/{img_nm}/gaussian/{gaussian_file}"
+    load_pixel = f"{root}/result/{method}/{img_nm}/pixel/{pixel_file}"
+    
+    pixel_df = pd.read_csv(load_pixel, index_col=0)
+    gaussian_df = pd.read_csv(load_gaussian, index_col=0)
+    V1_df = pd.read_csv(load_V1, index_col=0)
+
+    V1 = ['V1'] * len(V1_df)
+    gaussian = ['gaussian'] * len(gaussian_df)
+    pixel = ['pixel'] * len(pixel_df)
+    #    print(len(V1_df))
+    pixel_df['type'] = pixel
+    V1_df['type'] = V1
+    gaussian_df['type'] = gaussian
+    
+    df = pd.concat([pixel_df, V1_df, gaussian_df])
+    return df
 
 def process_result_data(img_file, method, target_param, pixel_file=None,
                         gaussian_file=None, V1_file=None):
@@ -290,13 +314,66 @@ def process_result_data(img_file, method, target_param, pixel_file=None,
                'pixel': pixel_df, 
               }
     # Remove unnecessary index column in pandas
-    for obs, file in obs_dict.items():
+    for obs, file in obs_dict.items():  
         obs_dict.update({obs: remove_unnamed_data(file)})
         
     for obs, file in obs_dict.items():
         obs_dict.update({obs: get_min_error_data(method, obs, file, target_param)})
     
     return obs_dict
+
+def process_result_data_new(img_file, method, target_param, pixel_file=None,
+                        gaussian_file=None, V1_file=None):
+    ''' 
+    Open 3 csv data files, make it as pandas dataframe, remove unnecessary 
+    column, find the plotting data with minimum mean error 
+    for each of target_param.
+    
+    Parameters
+    ----------
+    img_file : String
+        The name of image file that will be worked on
+        
+    method : String
+        Basis the data file was worked on. 
+        Currently upports dct and dwt (discrete cosine/wavelet transform).
+        
+    target_param : String 
+        Param for which to get min error
+        [num_cell, alpha] for num_cell and alpha error plots respectively.
+    
+    pixel_file : String
+        Pixel observation data file from hyperparameter sweep.
+        Required for plotting.
+    
+    gaussian_file : String
+        Gaussian observation data file from hyperparameter sweep.
+        Required for plotting.
+
+    V1_file : String
+        V1 observation data file from hyperparameter sweep.
+        Required for plotting.
+        
+    Returns
+    ----------
+    obs_dict : python dictionary
+        Dictionary that contains ['V1', 'gaussian', 'pixel'] as a key
+        [0]th value storing plotting data with [1]st data containing 
+        minimum mean error parameter for each num_cell.
+    '''
+    img_nm = img_file.split('.')[0]
+    
+    # TODO: Currently all three files required,
+    # thinking if plot can be generated with just one or two files as well
+    if (V1_file==None or gaussian_file==None or pixel_file==None):
+        print("All three files required to generate figure")
+        sys.exit(0)
+        
+    data = load_dataframe_new(img_nm, method, pixel_file, gaussian_file, V1_file)
+    data['sparse_freq'] = data['sparse_freq'].fillna(0)
+    data['cell_size'] = data['cell_size'].fillna(0)
+    return data
+
 
 def save_reconstruction_error(img_name, method, observation):
     '''

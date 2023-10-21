@@ -118,18 +118,55 @@ def error_vs_num_cell(img, method, pixel_file=None, gaussian_file=None,
         sys.exit(0)
     
     #Pre-processing data to receive
-    data = process_result_data(img, method, 'num_cell', pixel_file, gaussian_file, V1_file)
-    plt.xticks(data['V1'][0]['num_cell'])
+    data = process_result_data_new(img, method, 'num_cell', pixel_file, gaussian_file, V1_file)
+    mean_data = data.groupby(['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size']).mean()
+    mean_data = mean_data.reset_index()
+
+    # optimize alp value for each num cell and type
+    # limit data to those alp values
+    
+    pixel_data = pd.DataFrame()
+    gaussian_data = pd.DataFrame()
+    V1_data = pd.DataFrame()
+
+    for num_cell in mean_data['num_cell'].unique():
+        # get optimal hyperparams for each num cell
+        pixel_opt = mean_data[mean_data['type'] == 'pixel']
+        pixel_opt = pixel_opt[pixel_opt['num_cell']==num_cell]
+        pixel_opt = pixel_opt[pixel_opt['error'] == pixel_opt['error'].min()]
+        pixel_data = pd.concat([pixel_data, pd.merge(pixel_opt, data, on=['type', 'alp', 'num_cell'])])
+
+        gaussian_opt = mean_data[mean_data['type'] == 'gaussian']
+        gaussian_opt = gaussian_opt[gaussian_opt['num_cell']==num_cell]
+        gaussian_opt = gaussian_opt[gaussian_opt['error'] == gaussian_opt['error'].min()]
+        gaussian_data = pd.concat([gaussian_data, pd.merge(gaussian_opt, data, on=['type', 'alp', 'num_cell'])])
+
+        V1_opt = mean_data[mean_data['type'] == 'V1']
+        V1_opt = V1_opt[V1_opt['num_cell']==num_cell]
+        V1_opt = V1_opt[V1_opt['error'] == V1_opt['error'].min()]
+        V1_data = pd.concat([V1_data, pd.merge(V1_opt, data, on=['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size'])])
+
+        #        print(V1_data)
+        
+        #       print('\n\n')
+    mean_data = data.groupby(['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size']).mean()
+    mean_data = mean_data.reset_index()
+
+    sns.lineplot(V1_data, x='num_cell', y='error_y', label='V1')
+    sns.lineplot(pixel_data, x='num_cell', y='error_y', label='pixel')
+    sns.lineplot(gaussian_data, x='num_cell', y='error_y', label='gaussian')
+    plt.title(f'Num cell vs Error for {img} with 16x16 filter')
+    '''plt.xticks(data['V1'][0]['num_cell'])
     plt.xlabel('num_cell')
-    title = f"Num_Cell_Vs_Error_{img_nm}_"
+    title = f"Num_Cell_Vs_Error_{img_nm}_(8x8"
     plt.title(title.replace('_', ' '))
     plt.legend(['V1', 'Pixel', 'Gaussian'], loc = 'best')
-    
     for obs, plot in data.items():
         sns.lineplot(data = plot[0], x = 'num_cell', y = 'error', label = obs)
         plt.plot(plot[1]['num_cell'], plot[1]['min_error'], 'r.')
     plt.legend(loc = 'best')
-
+    '''
+    
 def error_vs_alpha(img, method, pixel_file, gaussian_file, V1_file, save = False):
     ''' 
     Generate figure that compares various alpha LASSO penalty and how it affects
@@ -171,8 +208,43 @@ def error_vs_alpha(img, method, pixel_file, gaussian_file, V1_file, save = False
         sys.exit(0)
 
     #Pre-processing data to receive
-    data = process_result_data(img, method, 'alp', pixel_file, gaussian_file, V1_file)
-    print(data['V1'])
+    data = process_result_data_new(img, method, 'alp', pixel_file, gaussian_file, V1_file)
+    data = data[data['num_cell'] == 80]
+    mean_data = data.groupby(['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size']).mean()
+    mean_data = mean_data.reset_index()
+    
+
+
+    pixel_data = pd.DataFrame()
+    gaussian_data = pd.DataFrame()
+    V1_data = pd.DataFrame()
+
+    for alp in mean_data['alp'].unique():
+        # get optimal hyperparams for each num cell
+        pixel_opt = mean_data[mean_data['type'] == 'pixel']
+        pixel_opt = pixel_opt[pixel_opt['alp'] == alp]
+        pixel_opt = pixel_opt[pixel_opt['error'] == pixel_opt['error'].min()]
+        pixel_data = pd.concat([pixel_data, pd.merge(pixel_opt, data, on=['type', 'alp', 'num_cell'])])
+
+        gaussian_opt = mean_data[mean_data['type'] == 'gaussian']
+        gaussian_opt = gaussian_opt[gaussian_opt['alp'] == alp]
+        gaussian_opt = gaussian_opt[gaussian_opt['error'] == gaussian_opt['error'].min()]
+        gaussian_data = pd.concat([gaussian_data, pd.merge(gaussian_opt, data, on=['type', 'alp', 'num_cell'])])
+
+        V1_opt = mean_data[mean_data['type'] == 'V1']
+        V1_opt = V1_opt[V1_opt['alp']==alp]
+        V1_opt = V1_opt[V1_opt['error'] == V1_opt['error'].min()]
+        V1_data = pd.concat([V1_data, pd.merge(V1_opt, data, on=['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size'])])
+        
+
+    sns.lineplot(V1_data, x='alp', y='error_y', label='V1')
+    sns.lineplot(pixel_data, x='alp', y='error_y', label='pixel')
+    sns.lineplot(gaussian_data, x='alp', y='error_y', label='gaussian')
+    plt.title(f'Alpha vs Error for {img} with 16x16 filter')
+    plt.xscale('log')
+    
+    '''
+    #print(data['V1'])
     plt.xticks(data['V1'][0]['alp'])
     plt.xlabel('alpha')
     title = f"Alpha_Vs_Error_{img_nm}_"
@@ -191,6 +263,7 @@ def error_vs_alpha(img, method, pixel_file, gaussian_file, V1_file, save = False
                 plt.annotate(f'cell_size = {sizes[i]}, sparse_freq = {freqs[i]}',
                       (alphas[i], err))
     plt.legend(loc = 'best')
+    '''
     
 def colorbar_live_reconst(method, img_name, observation, color, dwt_type, level,
                           alpha, num_cells, cell_size, sparse_freq, fixed_weights):
