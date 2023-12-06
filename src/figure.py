@@ -13,7 +13,11 @@ from src.utility import *
 from src.args import *
 # Package for importing image representation
 from PIL import Image, ImageOps
-
+# set size for each font
+ticksize = 20 # x, y ticks
+labelsize = 20 # x, y label
+titlesize = 30 #title
+legend_size = 20 # legend text
 
 def show_reconstruction_error(img_arr, reconst, method,
                               observation, num_cell, img_name): 
@@ -49,13 +53,12 @@ def show_reconstruction_error(img_arr, reconst, method,
     ## --adjust the shrink parameter to fit.
     fig, axis = plt.subplots(1, 2, figsize = (8, 8))
     plt.tight_layout()
-
     # prepare the reconstruction axis
-    axis[0].set_title(f"{observation} Reconst: {num_cell} cell")
+    axis[0].set_title(f"{observation} Reconst: {num_cell} samples")
     axis[0].axis('off')
 
     # prepare the observation error axis
-    axis[1].set_title(f"{observation} Error: {num_cell} cells")
+    axis[1].set_title(f"{observation} Error: {num_cell} samples")
     axis[1].axis('off')
     
     # calculate error for RGB images
@@ -118,10 +121,16 @@ def error_vs_num_cell(img, method, pixel_file=None, gaussian_file=None,
         sys.exit(0)
     
     #Pre-processing data to receive
+    filter_dim = '(32, 32)'
     data = process_result_data_new(img, method, 'num_cell', pixel_file, gaussian_file, V1_file)
-    mean_data = data.groupby(['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size']).mean()
+    data = data[data['filter_dim']==filter_dim]
+    if method == 'dwt':
+        mean_data = data.groupby(['type', 'alp', 'num_cell', 'filter_dim', 'sparse_freq', 'cell_size', 'lv']).mean()
+    elif method == 'dct':
+        mean_data = data.groupby(['type', 'alp', 'num_cell', 'filter_dim', 'sparse_freq', 'cell_size']).mean()
+        
     mean_data = mean_data.reset_index()
-
+    #    print(mean_data)
     # optimize alp value for each num cell and type
     # limit data to those alp values
     
@@ -129,43 +138,172 @@ def error_vs_num_cell(img, method, pixel_file=None, gaussian_file=None,
     gaussian_data = pd.DataFrame()
     V1_data = pd.DataFrame()
 
+
     for num_cell in mean_data['num_cell'].unique():
         # get optimal hyperparams for each num cell
         pixel_opt = mean_data[mean_data['type'] == 'pixel']
         pixel_opt = pixel_opt[pixel_opt['num_cell']==num_cell]
         pixel_opt = pixel_opt[pixel_opt['error'] == pixel_opt['error'].min()]
-        pixel_data = pd.concat([pixel_data, pd.merge(pixel_opt, data, on=['type', 'alp', 'num_cell'])])
+        if method == 'dwt':
+            pixel_data = pd.concat([pixel_data, pd.merge(pixel_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'lv'])])
+        elif method == 'dct':
+            pixel_data = pd.concat([pixel_data, pd.merge(pixel_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim'])])
 
         gaussian_opt = mean_data[mean_data['type'] == 'gaussian']
         gaussian_opt = gaussian_opt[gaussian_opt['num_cell']==num_cell]
         gaussian_opt = gaussian_opt[gaussian_opt['error'] == gaussian_opt['error'].min()]
-        gaussian_data = pd.concat([gaussian_data, pd.merge(gaussian_opt, data, on=['type', 'alp', 'num_cell'])])
-
+        if method == 'dwt':
+            gaussian_data = pd.concat([gaussian_data, pd.merge(gaussian_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'lv'])])
+        if method == 'dct':
+            gaussian_data = pd.concat([gaussian_data, pd.merge(gaussian_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim'])])
+            
         V1_opt = mean_data[mean_data['type'] == 'V1']
         V1_opt = V1_opt[V1_opt['num_cell']==num_cell]
         V1_opt = V1_opt[V1_opt['error'] == V1_opt['error'].min()]
-        V1_data = pd.concat([V1_data, pd.merge(V1_opt, data, on=['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size'])])
+        if method == 'dwt':
+            V1_data = pd.concat([V1_data, pd.merge(V1_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'sparse_freq', 'cell_size', 'lv'])])
+        elif method == 'dct':
+            V1_data = pd.concat([V1_data, pd.merge(V1_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'sparse_freq', 'cell_size'])])
 
-        #        print(V1_data)
+    #    print("V1: ", V1_data)
+    sns.lineplot(V1_data, x='num_cell', y='error_y', errorbar='pi', label='V1')
+    sns.lineplot(pixel_data, x='num_cell', y='error_y', errorbar='pi', label='pixel')
+    sns.lineplot(gaussian_data, x='num_cell', y='error_y', errorbar='pi', label='Gaussian')
+    #print(V1_data)
+    img = img.split('.')[0].capitalize()
+
+    # set size for each font
+    #ticksize = 30 # x, y ticks
+    #labelsize = 30 # x, y label
+    #titlesize = 40 #title
+    #legend_size = 30 # legend text
+    dim = eval(filter_dim)[0]
+
+    plt.ylabel('Error', fontsize=labelsize)
+    plt.xlabel('$n$', fontsize=labelsize)
+    plt.xticks(fontsize=ticksize)
+    plt.yticks(fontsize=ticksize)
+
+    plt.title(f'{img}', fontsize=titlesize)
+    plt.legend(fontsize=legend_size)
+    fig = plt.gcf()
+    width = 18.5
+    height = 10.5
+    plt.tight_layout()
+    #    fig.set_size_inches(width, height)
         
-        #       print('\n\n')
-    mean_data = data.groupby(['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size']).mean()
-    mean_data = mean_data.reset_index()
-
-    sns.lineplot(V1_data, x='num_cell', y='error_y', label='V1')
-    sns.lineplot(pixel_data, x='num_cell', y='error_y', label='pixel')
-    sns.lineplot(gaussian_data, x='num_cell', y='error_y', label='gaussian')
-    plt.title(f'Num cell vs Error for {img} with 16x16 filter')
-    '''plt.xticks(data['V1'][0]['num_cell'])
-    plt.xlabel('num_cell')
-    title = f"Num_Cell_Vs_Error_{img_nm}_(8x8"
-    plt.title(title.replace('_', ' '))
-    plt.legend(['V1', 'Pixel', 'Gaussian'], loc = 'best')
-    for obs, plot in data.items():
-        sns.lineplot(data = plot[0], x = 'num_cell', y = 'error', label = obs)
-        plt.plot(plot[1]['num_cell'], plot[1]['min_error'], 'r.')
-    plt.legend(loc = 'best')
+def error_vs_filter_dim(img, method, pixel_file=None, gaussian_file=None,
+                          V1_file=None, data_grab = 'auto') :
+    ''' 
+    Generate figure that compares which method gives the best minimum error
+    
+    Parameters
+    ----------
+    img : String
+        The name of image file.
+       
+    method : String
+        Basis the data file was worked on. 
+        Currently supporting dct and dwt (discrete cosine/wavelet transform).
+    
+    pixel_file : String
+        Pixel observation data file from hyperparameter sweep.
+        Required for plotting.
+    
+    gaussian_file : String
+        Gaussian observation data file from hyperparameter sweep.
+        Required for plotting.
+    
+    V1_file : String
+        V1 observation data file from hyperparameter sweep.
+        Required for plotting.
+    
+    data_grab : String
+        With structured path, decides to grab all three data files 
+        automatically or manually. Currently not implemented.
+        ['auto', 'manual'].
     '''
+    img_nm = img.split('.')[0]
+    
+    if None in [pixel_file, gaussian_file, V1_file] and data_grab == 'manual': 
+        print("All observation data file must be given")    
+        sys.exit(0)
+    
+    #Pre-processing data to receive
+    data = process_result_data_new(img, method, 'filter_dim', pixel_file, gaussian_file, V1_file)
+    if method == 'dwt':
+        mean_data = data.groupby(['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size', 'filter_dim', 'lv']).mean()
+    elif method == 'dct':
+        mean_data = data.groupby(['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size', 'filter_dim']).mean()
+    mean_data = mean_data.reset_index()
+    # optimize alp value for each num cell and type
+    # limit data to those alp values
+    
+    pixel_data = pd.DataFrame()
+    gaussian_data = pd.DataFrame()
+    V1_data = pd.DataFrame()
+
+    n_prop = 0.3125
+    #print(mean_data)
+    
+    for filter_dim in mean_data['filter_dim'].unique():
+        n = n_prop * eval(filter_dim)[0] ** 2
+        
+        # get optimal hyperparams for each num cell
+        pixel_opt = mean_data[mean_data['type'] == 'pixel']
+        pixel_opt = pixel_opt[pixel_opt['filter_dim']==filter_dim]
+        pixel_opt = pixel_opt[pixel_opt['num_cell']==n]
+        pixel_opt = pixel_opt[pixel_opt['error'] == pixel_opt['error'].min()]
+        if method == 'dwt':
+            pixel_data = pd.concat([pixel_data, pd.merge(pixel_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'lv'])])
+        elif method == 'dct':
+            pixel_data = pd.concat([pixel_data, pd.merge(pixel_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim'])])
+            
+        gaussian_opt = mean_data[mean_data['type'] == 'gaussian']
+        gaussian_opt = gaussian_opt[gaussian_opt['filter_dim']==filter_dim]
+        gaussian_opt = gaussian_opt[gaussian_opt['num_cell']==n]
+        gaussian_opt = gaussian_opt[gaussian_opt['error'] == gaussian_opt['error'].min()]
+        if method == 'dwt':
+            gaussian_data = pd.concat([gaussian_data, pd.merge(gaussian_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'lv'])])
+        elif method == 'dct':
+            gaussian_data = pd.concat([gaussian_data, pd.merge(gaussian_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim'])])
+
+        V1_opt = mean_data[mean_data['type'] == 'V1']
+        V1_opt = V1_opt[V1_opt['filter_dim']==filter_dim]
+        V1_opt = V1_opt[V1_opt['num_cell']==n]
+        V1_opt = V1_opt[V1_opt['error'] == V1_opt['error'].min()]
+        if method == 'dwt':
+            V1_data = pd.concat([V1_data, pd.merge(V1_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'sparse_freq', 'cell_size', 'lv'])])
+        elif method == 'dct':
+            V1_data = pd.concat([V1_data, pd.merge(V1_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'sparse_freq', 'cell_size'])])
+
+            
+    sns.lineplot(V1_data, x='filter_dim', y='error_y', errorbar='pi', label='V1')
+    sns.lineplot(pixel_data, x='filter_dim', y='error_y', errorbar='pi', label='pixel')
+    sns.lineplot(gaussian_data, x='filter_dim', y='error_y', errorbar='pi', label='Gaussian')
+    
+    img = img.split('.')[0].capitalize()
+
+    # set size for each font
+    #ticksize = 20 # x, y ticks
+    #labelsize = 20 # x, y label
+    #titlesize = 20 #title
+    #legend_size = 20 # legend text
+    
+    plt.xticks(fontsize=ticksize)
+    plt.yticks(fontsize=ticksize)
+
+    plt.ylabel('Error', fontsize=labelsize)
+    plt.xlabel('Patch dimension', fontsize=labelsize)
+    plt.title(f'{img}', fontsize=titlesize)
+    plt.legend(fontsize=legend_size)
+    fig = plt.gcf()
+    ax = plt.gca()
+    ax.set_xticklabels(['8x8', '16x16', '32x32'])
+    width = 18.5
+    height = 10.5
+    plt.tight_layout()
+    #fig.set_size_inches(width, height)
     
 def error_vs_alpha(img, method, pixel_file, gaussian_file, V1_file, save = False):
     ''' 
@@ -197,7 +335,9 @@ def error_vs_alpha(img, method, pixel_file, gaussian_file, V1_file, save = False
         Determines if the image will be saved.
     '''
 
-    
+
+    fixed_cell = 320
+    filter_dim = '(32, 32)'
     img_nm = img.split('.')[0]
     if None in [pixel_file, gaussian_file, V1_file]:
         print("Currently all file required")
@@ -209,10 +349,14 @@ def error_vs_alpha(img, method, pixel_file, gaussian_file, V1_file, save = False
 
     #Pre-processing data to receive
     data = process_result_data_new(img, method, 'alp', pixel_file, gaussian_file, V1_file)
-    data = data[data['num_cell'] == 80]
-    mean_data = data.groupby(['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size']).mean()
+    data = data[data['num_cell'] == fixed_cell]
+    data = data[data['filter_dim'] == filter_dim]
+    if method == 'dwt':
+        mean_data = data.groupby(['type', 'alp', 'num_cell', 'filter_dim', 'sparse_freq', 'cell_size', 'lv']).mean()
+    elif method == 'dct':
+        mean_data = data.groupby(['type', 'alp', 'num_cell', 'filter_dim', 'sparse_freq', 'cell_size']).mean()
     mean_data = mean_data.reset_index()
-    
+    #print(mean_data)
 
 
     pixel_data = pd.DataFrame()
@@ -224,49 +368,58 @@ def error_vs_alpha(img, method, pixel_file, gaussian_file, V1_file, save = False
         pixel_opt = mean_data[mean_data['type'] == 'pixel']
         pixel_opt = pixel_opt[pixel_opt['alp'] == alp]
         pixel_opt = pixel_opt[pixel_opt['error'] == pixel_opt['error'].min()]
-        pixel_data = pd.concat([pixel_data, pd.merge(pixel_opt, data, on=['type', 'alp', 'num_cell'])])
+        if method == 'dwt':
+            pixel_data = pd.concat([pixel_data, pd.merge(pixel_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'lv'])])
+        elif method == 'dct':
+            pixel_data = pd.concat([pixel_data, pd.merge(pixel_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim'])])
 
         gaussian_opt = mean_data[mean_data['type'] == 'gaussian']
         gaussian_opt = gaussian_opt[gaussian_opt['alp'] == alp]
         gaussian_opt = gaussian_opt[gaussian_opt['error'] == gaussian_opt['error'].min()]
-        gaussian_data = pd.concat([gaussian_data, pd.merge(gaussian_opt, data, on=['type', 'alp', 'num_cell'])])
+        if method == 'dwt':
+            gaussian_data = pd.concat([gaussian_data, pd.merge(gaussian_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'lv'])])
+        elif method == 'dct':
+            gaussian_data = pd.concat([gaussian_data, pd.merge(gaussian_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim'])])
 
         V1_opt = mean_data[mean_data['type'] == 'V1']
         V1_opt = V1_opt[V1_opt['alp']==alp]
         V1_opt = V1_opt[V1_opt['error'] == V1_opt['error'].min()]
-        V1_data = pd.concat([V1_data, pd.merge(V1_opt, data, on=['type', 'alp', 'num_cell', 'sparse_freq', 'cell_size'])])
-        
+        if method == 'dwt':
+            V1_data = pd.concat([V1_data, pd.merge(V1_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'sparse_freq', 'cell_size', 'lv'])])
+        elif method == 'dct':
+            V1_data = pd.concat([V1_data, pd.merge(V1_opt, data, on=['type', 'alp', 'num_cell', 'filter_dim', 'sparse_freq', 'cell_size'])])
+            
+    sns.lineplot(V1_data, x='alp', y='error_y', errorbar='pi', label='V1')
+    sns.lineplot(pixel_data, x='alp', y='error_y', errorbar='pi', label='pixel')
+    sns.lineplot(gaussian_data, x='alp', y='error_y', errorbar='pi', label='Gaussian')
 
-    sns.lineplot(V1_data, x='alp', y='error_y', label='V1')
-    sns.lineplot(pixel_data, x='alp', y='error_y', label='pixel')
-    sns.lineplot(gaussian_data, x='alp', y='error_y', label='gaussian')
-    plt.title(f'Alpha vs Error for {img} with 16x16 filter')
-    plt.xscale('log')
+    # set size for each font
+    #ticksize = 20 # x, y ticks
+    #labelsize = 20 # x, y label
+    #titlesize = 20 #title
+    #legend_size = 20 # legend text
+    dim = eval(filter_dim)[0]
+
+    plt.xticks(fontsize=ticksize)
+    plt.yticks(fontsize=ticksize)
+    plt.xlabel(r'Penalty $\alpha$', fontsize=labelsize)
+    plt.ylabel('Error', fontsize = labelsize)
+    img = img.split('.')[0].capitalize()
+    plt.title(f'{img}', fontsize=titlesize)
+
+    plt.legend(fontsize=legend_size)
+
+    fig = plt.gcf()
+    width = 18.5
+    height = 10.5
+    #fig.set_size_inches(width, height)
     
-    '''
-    #print(data['V1'])
-    plt.xticks(data['V1'][0]['alp'])
-    plt.xlabel('alpha')
-    title = f"Alpha_Vs_Error_{img_nm}_"
-    plt.title(title.replace('_', ' '))
-    plt.legend(['V1', 'Pixel', 'Gaussian'], loc = 'best')
     plt.xscale('log')
-    for obs, plot in data.items():
-        sns.lineplot(data = plot[0], x = 'alp', y = 'error', label = obs)
-        plt.plot(plot[1]['alp'], plot[1]['min_error'], 'r.')
-        if obs == 'V1':
-            sizes = list(plot[1]['cell_size'])  
-            freqs = list(plot[1]['sparse_freq'])
-            alphas = list(plot[1]['alp'])
-            errors = list(plot[1]['min_error'])
-            for i, err in  enumerate(errors):  
-                plt.annotate(f'cell_size = {sizes[i]}, sparse_freq = {freqs[i]}',
-                      (alphas[i], err))
-    plt.legend(loc = 'best')
-    '''
+    plt.tight_layout()
     
 def colorbar_live_reconst(method, img_name, observation, color, dwt_type, level,
-                          alpha, num_cells, cell_size, sparse_freq, fixed_weights):
+                          alpha, num_cells, cell_size, sparse_freq, fixed_weights,
+                          filter_dim):
     '''
     Generates a reconstruction and error figure for desired parameters.
 
@@ -311,8 +464,10 @@ def colorbar_live_reconst(method, img_name, observation, color, dwt_type, level,
         Determines filed frequency on how frequently 
         opened and closed area would appear. Affect the data training
     '''
-
-    filter_dim = (30, 30)
+    
+    #  print(filter_dim)
+    #  print(alpha)
+    #  print(num_cells)
     img_arr = process_image(img_name, color, False)
     print(f"Image \"{img_name}\" loaded.") 
     reconst = large_img_experiment(
@@ -325,10 +480,10 @@ def main():
     fig_type, args, save = parse_figure_args()
     if fig_type == 'colorbar' :
       method, img_name, observation, color, dwt_type, level, alpha, num_cells,\
-          cell_size, sparse_freq, fixed_weights = args
+          cell_size, sparse_freq, fixed_weights, filter_dim = args
       colorbar_live_reconst(
           method, img_name, observation, color, dwt_type, level,
-          alpha, num_cells, cell_size, sparse_freq, fixed_weights)
+          alpha, num_cells, cell_size, sparse_freq, fixed_weights, filter_dim)
       if save:
           save_reconstruction_error(img_name, method, observation)
     elif fig_type == 'num_cell':
@@ -342,6 +497,12 @@ def main():
         error_vs_alpha(img_name, method, pixel, gaussian, v1, data_grab)
         if save:
             save_alpha(img_name, pixel, gaussian, v1, method)
+    elif fig_type == 'filter_dim':
+        img_name, method, pixel, gaussian, v1, data_grab = args
+        error_vs_filter_dim(img_name, method, pixel, gaussian, v1, data_grab)
+        if save:
+            save_filter_dim(img_name, pixel, gaussian, v1, method)
+    
     if not save:
         plt.show()
 

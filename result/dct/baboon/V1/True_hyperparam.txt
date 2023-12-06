@@ -1,0 +1,33 @@
+True_param_Sun_Oct_1_23_13_45_2023.csv
+   rep: [0]
+   alp: [0.01, 0.1, 1, 10]
+   num_cell: [8, 14, 20, 26, 32]
+   cell_size: [200]
+   sparse_freq: [2, 4, 6, 8]
+
+
+True_param_Mon_Oct_2_01_11_02_2023.csv
+   rep: [0 1 2 3 4 5 6 7 8 9]
+   alp: [0.01, 0.1, 1, 10]
+   num_cell: [8, 14, 20, 26, 32]
+   cell_size: [50, 100, 200]
+   sparse_freq: [2, 4, 6, 8]
+
+
+True_param_Mon_Oct_2_14_47_21_2023.csv
+   rep: [0 1 2 3 4 5 6 7 8 9]
+   alp: [0.01, 0.1, 1, 10]
+   num_cell: [32, 56, 80, 104, 128]
+   cell_size: [50, 100, 200]
+   sparse_freq: [2, 4, 6, 8]
+
+
+True_param_Wed_Nov_1_01_41_36_2023.csv
+   rep: [0 1 2 3 4 5 6 7 8 9]
+   alp: [0.01, 0.1, 1, 10]
+   num_cell: [128, 224, 320, 416, 512]
+   cell_size: [50, 100, 200]
+   sparse_freq: [2, 4, 6, 8]
+   filter_dim: [(32, 32)]
+
+

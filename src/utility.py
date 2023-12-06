@@ -75,7 +75,7 @@ def fig_save_path(img_nm, method, observation, save_nm):
     fig_path = os.path.join(root, f"figures/{method}/{img_nm}/{observation}")
     Path(fig_path).mkdir(parents=True, exist_ok = True)
     #TODO: add timestamp onto save_nm autometically
-    return os.path.join(fig_path, "{save_nm}.png".format(save_nm = save_nm))
+    return os.path.join(fig_path, "{save_nm}.svg".format(save_nm = save_nm))
 
 def data_save_path(img_nm, method, observation, save_nm): 
     ''' 
@@ -452,6 +452,35 @@ def save_alpha(img_name, pixel_file, gaussian_file, V1_file, method):
     save_path = fig_save_path(img_name, method, 'alpha_error', save_name)
     plt.savefig(save_path, dpi = 200)
     print(f'saving error vs alpha figure to {save_path}')
+
+def save_filter_dim(img_name, pixel_file, gaussian_file, V1_file, method):
+    '''
+    Saves the alpha vs error figure to a filepath built from params 
+
+    Parameters
+    ----------
+    img_name : String
+        Name of image file to reconstruct
+
+    pixel_file : String
+        Pixel observation data file from hyperparameter sweep.
+    
+    gaussian_file : String
+        Gaussian observation data file from hyperparameter sweep.
+    
+    V1_file : String
+        V1 observation data file from hyperparameter sweep.
+
+    method : String
+        Basis the data file was worked on. 
+        Currently supports dct and dwt (discrete cosine/wavelet transform).
+    '''
+    # for its save name, the name of file order is pixel -> gaussian -> V1 
+    save_name = pixel_file.split('.')[0] + '_' + \
+        gaussian_file.split('.')[0] + '_' + V1_file.split('.')[0]
+    save_path = fig_save_path(img_name, method, 'filter_dim', save_name)
+    plt.savefig(save_path, dpi = 200)
+    print(f'saving error vs filter figure to {save_path}')
 
     
 def get_min_error_data(method, observation, data_df, target_param):

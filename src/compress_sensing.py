@@ -227,13 +227,15 @@ def fourier_reconstruct(W, y, alpha, sample_sz, n, m, fit_intercept) :
     warnings.filterwarnings('ignore', category=ConvergenceWarning)
     
     theta = fft.dctn(W.reshape(sample_sz, n, m), norm = 'ortho', axes = [1, 2])
+    
     theta = theta.reshape(sample_sz, n * m)
-
+    #print(theta.shape)
     ## Initialize Lasso and Fit data
     mini = Lasso(alpha = alpha, fit_intercept = fit_intercept)
     mini.fit(theta, y)
     ## Retrieve sparse vector s
     s = mini.coef_
+    #    print(s.shape)
     img = fft.idctn(s.reshape(n, m), norm='ortho', axes=[0,1])
     return img
 
@@ -295,12 +297,17 @@ def wavelet_reconstruct(W, y, alpha, sample_sz, n, m,
 
     mini = Lasso(alpha = alpha, fit_intercept = fit_intercept)
     mini.fit(theta, y)
-
     s = mini.coef_
+    #print(s.shape)
 
+    # print(s.shape)
     s_unravel = pywt.unravel_coeffs(s, coeff_slices, coeff_shapes)
-    img = pywt.waverecn(s_unravel, dwt_type, mode = 'zero')
+#    print(s_unravel)
+    #   print(coeff_slices)
+    #  print(coeff_shapes)
     
+    img = pywt.waverecn(s_unravel, dwt_type, mode = 'zero')
+    #    print(img.shape)
     return img
 
 def generate_observations(img_arr, num_cell, observation, cell_size = None,
@@ -524,7 +531,7 @@ def color_experiment(img_arr, num_cell, cell_size = None, sparse_freq = None,
 
 
 def large_img_experiment(img_arr, num_cell, cell_size = None,
-                         sparse_freq = None, filter_dim = (30, 30),
+                         sparse_freq = None, filter_dim = (16, 16),
                          alpha = None, method = 'dct', observation = 'pixel',
                          lv = 2, dwt_type = 'db2', fixed_weights = False,
                          color = False) :
@@ -677,7 +684,9 @@ def large_img_experiment(img_arr, num_cell, cell_size = None,
     # base on filter dimension 
     num_work = (padding_n * padding_m) // (filt_n * filt_m)
     
-    
+    #    print(filter_dim)
+    #   print(alpha)
+    #  print(num_cell)
     # For each batch of data, run reconstruction 
     for pt in range(num_work):
         # Keep track over height of the batches. If working column
@@ -720,7 +729,8 @@ def large_img_experiment(img_arr, num_cell, cell_size = None,
                                          cell_size, sparse_freq)
 
             W_model = W.reshape(num_cell, filt_n, filt_m)    
-
+            #print(W.shape)
+            #print(y.shape)
             if (method == 'dct'):
                 reconst = reconstruct(W, y, alpha, method = method)
             else :
