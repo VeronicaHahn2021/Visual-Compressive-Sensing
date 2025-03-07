@@ -14,8 +14,8 @@ mode = '-c'
 alpha=0.1
 num_cell_100 = 100
 num_cell_300 = 300
-cell_size = 3
-sparse_freq = 1
+cell_size = 5    # receptive field size
+sparse_freq = 1  # blob size
 
 ## For wavelet variable
 lv= 2
@@ -31,8 +31,8 @@ small_img_arr_gray = process_image(small_img, False) #change from 'gray' to Fals
 big_img_arr = process_image(big_img, mode)
 big_img_arr_gray = process_image(big_img, False) #change from 'gray' to False
 
-V1_W_100, V1_y_100 = generate_V1_observation(small_img_arr_gray, num_cell_100, cell_size, sparse_freq)
-V1_W_300, V1_y_300 = generate_V1_observation(small_img_arr_gray, num_cell_300, cell_size, sparse_freq)
+#V1_W_100, V1_y_100 = generate_V1_observation(small_img_arr_gray, num_cell_100, cell_size, sparse_freq)
+#V1_W_300, V1_y_300 = generate_V1_observation(small_img_arr_gray, num_cell_300, cell_size, sparse_freq)
 
 def generate_theta(W):
     '''
@@ -42,7 +42,7 @@ def generate_theta(W):
     ----------
 
     W: array_like
-        Lists of weighted data(?)
+        Lists of weighted data
     '''
 
     num_cell, n, m = W.shape
@@ -80,19 +80,30 @@ def compute_mutual_coherence(theta) :
     np.fill_diagonal(M, 0) 
     return np.abs(M).flatten().max() 
 
-def dot_product_matrix(img_arr, obs_type):
+def dot_product_matrix(img_arr, observation):
     '''
     Create an array of dot products between columns
+
+    Parameters
+    ----------
+
+    img_arr: numpy_array
+        (n, m) shape image containing array of pixels.
+
+    observation: String
+        Observation technique that are going to be used to 
+        collect sample for reconstruction. Default set up to 'pixel'
+        Supported observation : ['pixel', 'gaussian', 'V1'].
     '''
 
-    if obs_type == 'V1':
-        W, Y = generate_V1_observation(img_arr, num_cell_100, cell_size, sparse_freq)
+    if observation == 'V1':
+        W, Y = generate_V1_observation(img_arr, num_cell_300, cell_size, sparse_freq)
         theta = generate_theta(W)
-    if obs_type == "pixel":
-        W, Y = generate_pixel_observation(img_arr, num_cell_100)
+    if observation == "pixel":
+        W, Y = generate_pixel_observation(img_arr, num_cell_300)
         theta = generate_theta(W)
-    if obs_type == "gaussian":
-        W, Y = generate_gaussian_observation(img_arr, num_cell_100)
+    if observation == "gaussian":
+        W, Y = generate_gaussian_observation(img_arr, num_cell_300)
         theta = generate_theta(W)
 
     col_norms = np.linalg.norm(theta, axis=0)
@@ -101,7 +112,7 @@ def dot_product_matrix(img_arr, obs_type):
     np.fill_diagonal(M, 0)
     return np.abs(M)
 
-def mutual_coherence_matrix(A, n, obs_type) :
+def mutual_coherence_matrix(A, n, num_cell, observation, sparse_freq = None) :
     '''
     Create a list of n computed mutual coherence(MC) values for given observations A
 
@@ -112,7 +123,7 @@ def mutual_coherence_matrix(A, n, obs_type) :
         how many MC should be collected from one image, 
         with purpose of averaging and comparing
 
-    obs_type: str
+    observation: str
         'V1', 'pixel', 'gaussian', which observation type we're computing for 
 
     The how:
@@ -126,94 +137,84 @@ def mutual_coherence_matrix(A, n, obs_type) :
     M = np.zeros(n)
     i = 0
     for i in range(n):
-        if obs_type == 'V1':
-            W, Y = generate_V1_observation(A, num_cell_100, cell_size, sparse_freq)
+        if observation == 'V1':
+            W, Y = generate_V1_observation(A, num_cell, cell_size, sparse_freq)
+            theta = generate_theta(W)
+            M[i] = compute_mutual_coherence(sort_theta(theta))
+            #M[i] = compute_mutual_coherence((theta))
+        if observation == "pixel":
+            W, Y = generate_pixel_observation(A, num_cell)
             theta = generate_theta(W)
             M[i] = compute_mutual_coherence(theta)
-        if obs_type == "pixel":
-            W, Y = generate_pixel_observation(A, num_cell_100)
-            theta = generate_theta(W)
-            M[i] = compute_mutual_coherence(theta)
-        if obs_type == "gaussian":
-            W, Y = generate_gaussian_observation(A, num_cell_100)
+        if observation == "gaussian":
+            W, Y = generate_gaussian_observation(A, num_cell)
             theta = generate_theta(W)
             M[i] = compute_mutual_coherence(theta)
     return M
 
-
+'''
 #Plot Mutual Coherence - WORKING for small_gray
-num = 50
-v1_mc = mutual_coherence_matrix(small_img_arr_gray, num, "V1")
-pix_mc = mutual_coherence_matrix(small_img_arr_gray, num, "pixel")
-gaus_mc = mutual_coherence_matrix(small_img_arr_gray, num, "gaussian")
+num = 3
+v1_mc = mutual_coherence_matrix(small_img_arr_gray, num, num_cell_300,  "V1", sparse_freq)
+pix_mc = mutual_coherence_matrix(small_img_arr_gray, num, num_cell_300, "pixel")
+gaus_mc = mutual_coherence_matrix(small_img_arr_gray, num,num_cell_300, "gaussian")
 all_mc = [v1_mc, pix_mc, gaus_mc]
 fig = plt.figure()
 fig.suptitle("Average Mutual Coherence", fontsize=14)
 ax = fig.add_subplot()
-ax.boxplot(all_mc)
+ax.boxplot(all_mc, tick_labels=['V1', 'pixel','Gaussian'])
 ax.set_xlabel("V1, Pix, Gaus")
 plt.show()
+'''
+
+def sort_theta(theta):
+    arr = np.arange(30)
+    kx = np.tile(arr, 30)
+    ky = np.repeat(arr, 30)
+
+    ksum = kx**2 + ky**2
+    perm = np.argsort(ksum) 
+    return theta[:, perm]
 
 
 #Plot Dot Products - WORKING for small_gray
 v1_dot = dot_product_matrix(small_img_arr_gray, "V1")
+v1_upper_dot = np.triu(v1_dot, k=1)
 pix_dot = dot_product_matrix(small_img_arr_gray, "pixel")
+pix_upper_dot = np.triu(pix_dot, k=1)
 gaus_dot = dot_product_matrix(small_img_arr_gray, "gaussian")
+gaus_upper_dot = np.triu(gaus_dot, k=1)
+
+bins = np.linspace(0,0.35, 50)
+plt.figure()
+plt.imshow(v1_dot, interpolation=None)
+plt.colorbar()
+
 
 plt.figure()
-plt.hist(v1_dot, bins = 30)
+
+plt.hist(v1_dot.flatten(), bins, cumulative=False, density=True, label='v1')
 plt.xlabel('Dot Product')
 plt.ylabel('Frequency')
 plt.title('V1 Dot Products')
-plt.show()
+# plt.show()
 
-plt.figure()
-plt.hist(pix_dot, bins = 30)
+# plt.figure()
+plt.hist(pix_dot.flatten(), bins, cumulative=False, density=True, label='pix')
 plt.xlabel('Dot Product')
 plt.ylabel('Frequency')
 plt.title('Pixel Dot Products')
-plt.show()
+#plt.show()
 
-plt.figure()
-plt.hist(gaus_dot, bins = 30)
+#plt.figure()
+plt.hist(gaus_dot.flatten(), bins, cumulative=False, density=True, label='gauss')
 plt.xlabel('Dot Product')
 plt.ylabel('Frequency')
 plt.title('Gaussian Dot Products')
-plt.show()
-
-
-'''
-v1_mc = mutual_coherence_matrix(small_img_arr, num, "V1")
-pix_mc = mutual_coherence_matrix(small_img_arr, num, "pixel")
-gaus_mc = mutual_coherence_matrix(small_img_arr, num, "gaussian")
-plt.plot(v1_mc,label = 'V1', marker = 'o')
-plt.plot(pix_mc, label = 'pixel', marker = 'o')
-plt.plot(gaus_mc,label = 'gaussian', marker = 'o')
-plt.title('Average MC: Tree, Color')
-plt.ylabel('Ave MC')
 plt.legend()
+
+plt.yscale('log')
+
 plt.show()
 
 
-v1_mc = mutual_coherence_matrix(big_img_arr, num, "V1")
-pix_mc = mutual_coherence_matrix(big_img_arr, num, "pixel")
-gaus_mc = mutual_coherence_matrix(big_img_arr, num, "gaussian")
-plt.plot(v1_mc,label = 'V1', marker = 'o')
-plt.plot(pix_mc, label = 'pixel', marker = 'o')
-plt.plot(gaus_mc,label = 'gaussian', marker = 'o')
-plt.title('Average MC: Peppers, Color')
-plt.ylabel('Ave MC')
-plt.legend()
-plt.show()
-
-v1_mc = mutual_coherence_matrix(big_img_arr_gray, num, "V1")
-pix_mc = mutual_coherence_matrix(big_img_arr_gray, num, "pixel")
-gaus_mc = mutual_coherence_matrix(big_img_arr_gray, num, "gaussian")
-plt.plot(v1_mc,label = 'V1', marker = 'o')
-plt.plot(pix_mc, label = 'pixel', marker = 'o')
-plt.plot(gaus_mc,label = 'gaussian', marker = 'o')
-plt.title('Average MC: Peppers, Grayscale')
-plt.ylabel('Ave MC')
-plt.legend()
-plt.show()
-'''
