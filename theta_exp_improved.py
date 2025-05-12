@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from src.compress_sensing import *
 from src.utility import *
 from PIL import Image, ImageOps
+import sys
 
 small_img = "tree_part1.jpg"
 big_img="peppers.png"
@@ -14,8 +15,9 @@ mode = '-c'
 alpha=0.1
 num_cell_100 = 100
 num_cell_300 = 300
-cell_size = 5    # receptive field size
-sparse_freq = 1  # blob size
+cell_size = 200    # receptive field size 
+sparse_freq = .001  # blob size            
+num = 20
 
 ## For wavelet variable
 lv= 2
@@ -31,8 +33,6 @@ small_img_arr_gray = process_image(small_img, False) #change from 'gray' to Fals
 big_img_arr = process_image(big_img, mode)
 big_img_arr_gray = process_image(big_img, False) #change from 'gray' to False
 
-#V1_W_100, V1_y_100 = generate_V1_observation(small_img_arr_gray, num_cell_100, cell_size, sparse_freq)
-#V1_W_300, V1_y_300 = generate_V1_observation(small_img_arr_gray, num_cell_300, cell_size, sparse_freq)
 
 def generate_theta(W):
     '''
@@ -80,7 +80,7 @@ def compute_mutual_coherence(theta) :
     np.fill_diagonal(M, 0) 
     return np.abs(M).flatten().max() 
 
-def dot_product_matrix(img_arr, observation):
+def dot_product_matrix(img_arr, observation, num_cell, cell_size = None, sparse_freq = None):
     '''
     Create an array of dot products between columns
 
@@ -97,13 +97,13 @@ def dot_product_matrix(img_arr, observation):
     '''
 
     if observation == 'V1':
-        W, Y = generate_V1_observation(img_arr, num_cell_300, cell_size, sparse_freq)
+        W, Y = generate_V1_observation(img_arr, num_cell, cell_size, sparse_freq)
         theta = generate_theta(W)
     if observation == "pixel":
-        W, Y = generate_pixel_observation(img_arr, num_cell_300)
+        W, Y = generate_pixel_observation(img_arr, num_cell)
         theta = generate_theta(W)
     if observation == "gaussian":
-        W, Y = generate_gaussian_observation(img_arr, num_cell_300)
+        W, Y = generate_gaussian_observation(img_arr, num_cell)
         theta = generate_theta(W)
 
     col_norms = np.linalg.norm(theta, axis=0)
@@ -112,19 +112,23 @@ def dot_product_matrix(img_arr, observation):
     np.fill_diagonal(M, 0)
     return np.abs(M)
 
-def mutual_coherence_matrix(A, n, num_cell, observation, sparse_freq = None) :
+def mutual_coherence_matrix(img_arr, n, num_cell, observation, cell_size = None, sparse_freq = None) :
     '''
-    Create a list of n computed mutual coherence(MC) values for given observations A
+    Returns a list of n computed mutual coherence(MC) values for given image and observation type
 
-    A: array_like(?)
-        Image // ex) small_img
+    img_arr: array_like
+        I(n, m) shape image containing array of pixels
 
     n: int 
         how many MC should be collected from one image, 
         with purpose of averaging and comparing
 
-    observation: str
-        'V1', 'pixel', 'gaussian', which observation type we're computing for 
+    observation: String
+        Observation technique that are going to be used to 
+        collect sample for reconstruction. Default set up to 'pixel'
+        Supported observation : ['pixel', 'gaussian', 'V1']. 
+    
+    
 
     The how:
     1. Create array M, will be our final list of MCs
@@ -138,34 +142,19 @@ def mutual_coherence_matrix(A, n, num_cell, observation, sparse_freq = None) :
     i = 0
     for i in range(n):
         if observation == 'V1':
-            W, Y = generate_V1_observation(A, num_cell, cell_size, sparse_freq)
+            W, Y = generate_V1_observation(img_arr, num_cell, cell_size, sparse_freq)
             theta = generate_theta(W)
-            M[i] = compute_mutual_coherence(sort_theta(theta))
-            #M[i] = compute_mutual_coherence((theta))
+            #M[i] = compute_mutual_coherence(sort_theta(theta))
+            M[i] = compute_mutual_coherence((theta))
         if observation == "pixel":
-            W, Y = generate_pixel_observation(A, num_cell)
+            W, Y = generate_pixel_observation(img_arr, num_cell)
             theta = generate_theta(W)
             M[i] = compute_mutual_coherence(theta)
         if observation == "gaussian":
-            W, Y = generate_gaussian_observation(A, num_cell)
+            W, Y = generate_gaussian_observation(img_arr, num_cell)
             theta = generate_theta(W)
             M[i] = compute_mutual_coherence(theta)
     return M
-
-'''
-#Plot Mutual Coherence - WORKING for small_gray
-num = 3
-v1_mc = mutual_coherence_matrix(small_img_arr_gray, num, num_cell_300,  "V1", sparse_freq)
-pix_mc = mutual_coherence_matrix(small_img_arr_gray, num, num_cell_300, "pixel")
-gaus_mc = mutual_coherence_matrix(small_img_arr_gray, num,num_cell_300, "gaussian")
-all_mc = [v1_mc, pix_mc, gaus_mc]
-fig = plt.figure()
-fig.suptitle("Average Mutual Coherence", fontsize=14)
-ax = fig.add_subplot()
-ax.boxplot(all_mc, tick_labels=['V1', 'pixel','Gaussian'])
-ax.set_xlabel("V1, Pix, Gaus")
-plt.show()
-'''
 
 def sort_theta(theta):
     arr = np.arange(30)
@@ -177,44 +166,134 @@ def sort_theta(theta):
     return theta[:, perm]
 
 
-#Plot Dot Products - WORKING for small_gray
-v1_dot = dot_product_matrix(small_img_arr_gray, "V1")
-v1_upper_dot = np.triu(v1_dot, k=1)
-pix_dot = dot_product_matrix(small_img_arr_gray, "pixel")
-pix_upper_dot = np.triu(pix_dot, k=1)
-gaus_dot = dot_product_matrix(small_img_arr_gray, "gaussian")
-gaus_upper_dot = np.triu(gaus_dot, k=1)
+def generate_coeff_vector(img_arr, num_cell, cell_size, sparse_freq):
+    '''
+    Generates the coeffiecient vector for frequencies present in img
+    '''
 
-bins = np.linspace(0,0.35, 50)
-plt.figure()
-plt.imshow(v1_dot, interpolation=None)
-plt.colorbar()
+    n, m = img_arr.shape
+    c = fft.dctn(img_arr, norm = 'ortho', axes = [0, 1])    
+    return c   #.reshape(n*m,1)
 
+def generate_ctMc(img_arr, obs_type, num_cell, norm = 2, diagonal = 0, cell_size = None, sparse_freq = None):
+    '''
+    Returns coefficient matrix * dot product matrix based on norm and what 
+    values the diagonal is set to
 
-plt.figure()
+    img_arr: array_like
+        I(n, m) shape image containing array of pixels
 
-plt.hist(v1_dot.flatten(), bins, cumulative=False, density=True, label='v1')
-plt.xlabel('Dot Product')
-plt.ylabel('Frequency')
-plt.title('V1 Dot Products')
-# plt.show()
+    observation: String
+        Observation technique that are going to be used to 
+        collect sample for reconstruction. Default set up to 'pixel'
+        Supported observation : ['pixel', 'gaussian', 'V1'].
 
-# plt.figure()
-plt.hist(pix_dot.flatten(), bins, cumulative=False, density=True, label='pix')
-plt.xlabel('Dot Product')
-plt.ylabel('Frequency')
-plt.title('Pixel Dot Products')
-#plt.show()
+    num_cell : int
+        Number of blobs that will be used to be 
+        determining which pixels to grab and use.
+    
+    norm: int
+        np.linalg.norm(coeffs) ** norm
+        norm type to divide by
 
-#plt.figure()
-plt.hist(gaus_dot.flatten(), bins, cumulative=False, density=True, label='gauss')
-plt.xlabel('Dot Product')
-plt.ylabel('Frequency')
-plt.title('Gaussian Dot Products')
-plt.legend()
+    diagonal: int
+        Number to replace diagonal values with in dot vector
+        0: will return metric without altering diagonal
+        diagonal >0: will return metric having replaced dot_vec diagonal
 
-plt.yscale('log')
+    cell_size : int
+        Determines field size of opened and closed blob of data. 
+        Affect the data training.
+        
+    sparse_freq : int
+        Determines filed frequency on how frequently 
+        opened and closed area would appear. 
+        Affect the data training.
+    '''
+    coeffs= generate_coeff_vector(small_img_arr_gray,num_cell,cell_size,sparse_freq).flatten()
+    dot_vec = dot_product_matrix(img_arr, obs_type, num_cell, cell_size, sparse_freq)
+    dot_vec = np.linalg.inv(dot_vec)
+    
+    if diagonal >= 1:
+        metric = np.fill_diagonal(dot_vec, diagonal)
+        metric = coeffs.T @ dot_vec @ coeffs / np.linalg.norm(coeffs) ** norm
+        return metric
+    else:
+        metric = coeffs.T @ dot_vec @ coeffs / np.linalg.norm(coeffs) ** norm
+        return metric
+    
+def generate_dot_metric(img_arr, obs_type, num_cell, norm = 1, cell_size = None, sparse_freq = None):
+    coeffs= generate_coeff_vector(small_img_arr_gray,num_cell,cell_size,sparse_freq).flatten()
+    dot_vec = dot_product_matrix(img_arr, obs_type, num_cell, cell_size, sparse_freq)
 
-plt.show()
+    if norm <= 0:
+        return np.linalg.norm(dot_vec @ coeffs, np.inf)
+    else:
+        return np.linalg.norm(dot_vec @ coeffs, norm)
 
+#~~~~~~~~~
+coeffs= generate_coeff_vector(small_img_arr_gray,num_cell_300,cell_size,sparse_freq).flatten() #c vector
 
+M_pix = dot_product_matrix(small_img_arr_gray, 'pixel', num_cell_300)
+# M_pix = np.linalg.inv(M_pix)
+    # metricPix = coeffs.T @ M_pix @ coeffs / np.linalg.norm(coeffs) ** 2
+    # np.fill_diagonal(M_pix, 1)
+# metricPix_diag1 = coeffs.T @ M_pix @ coeffs / np.linalg.norm(coeffs) ** 2
+# # Mhalf = np.linalg.cholesky(M_pix, upper=True)
+# metricPix_3 = np.linalg.norm(M_pix @ coeffs, 1)
+# print(f"Pix: {metricPix}, {metricPix_diag1}, {metricPix_3}")
+print(f"Pix: {np.linalg.norm(M_pix @ coeffs, np.inf)}")
+
+M_gaus = dot_product_matrix(small_img_arr_gray, 'gaussian', num_cell_300)
+# # M_gaus = np.linalg.inv(M_gaus)
+# metricGaus = coeffs.T @ M_gaus @ coeffs / np.linalg.norm(coeffs) ** 2
+# np.fill_diagonal(M_gaus, 1)
+# metricGaus_diag1 = coeffs.T @ M_gaus @ coeffs / np.linalg.norm(coeffs) ** 2
+# metricGaus_3 = np.linalg.norm(M_gaus @ coeffs, 1)
+# print(f"Gaus: {metricGaus}, {metricGaus_diag1}, {metricGaus_3}")
+print(f"Gaussian: {np.linalg.norm(M_gaus @ coeffs, np.inf)}")
+
+M_V1 = dot_product_matrix(small_img_arr_gray, 'V1', num_cell_300, cell_size, sparse_freq)
+# # M_V1 = np.linalg.inv(M_V1)
+# metricV1 = coeffs.T @ M_V1 @ coeffs / np.linalg.norm(coeffs) ** 2 
+# np.fill_diagonal(M_V1, 1)
+# metricV1_diag1 = coeffs.T @ M_V1 @ coeffs / np.linalg.norm(coeffs) ** 2
+# metricV1_3 = np.linalg.norm(M_V1 @ coeffs, 1)
+# print(f"V1: {metricV1}, {metricV1_diag1}, {metricV1_3}")
+print(f"V1: {np.linalg.norm(M_V1 @ coeffs, np.inf)}")
+
+sys.exit()
+
+M_vec = np.ravel(M) # dot product matrix as a vector
+#M_coords will be the coordinates of each coherence in M, which
+#we want to keep track of bc that'll tell us where the largest coherences are
+n = M.shape[0]
+M_coords = np.unravel_index(range(n**2), (n,n))
+arr = np.arange(30)
+kx = np.tile(arr, 30)
+ky = np.repeat(arr, 30)
+perm = np.argsort(M_vec)[::-1] # tells how to sort, reversed to decrease
+M_vec[perm] # decreasing
+i = M_coords[0][perm]
+j = M_coords[1][perm]
+# look into kx, ky to map i -> (kx, ky)
+i_coords=[[]for s in range(i.shape[0])]
+j_coords=[[]for s in range(j.shape[0])]
+for m in range(i.shape[0]):
+    i_coords[m] = [kx[i[m]],ky[i[m]]] #assigns kx,ky coordinates to elements in i
+for m in range(j.shape[0]):
+    j_coords[m] = [kx[j[m]],ky[j[m]]] #assigns kx,ky coordinates to elements in j
+i_arr = [i,i_coords]
+j_arr = [j,j_coords]
+i_sorted = pd.DataFrame({
+    "i": i,
+    "(kx,ky)": i_coords,
+    "MC": M_vec[perm]
+})
+j_sorted = pd.DataFrame({
+    "j": j,
+    "(kx,ky)": j_coords,
+    "MC": M_vec[perm]
+})
+
+coeff_vec = generate_coeff_vector(small_img_arr_gray,num_cell_300,cell_size,sparse_freq) #c vector
