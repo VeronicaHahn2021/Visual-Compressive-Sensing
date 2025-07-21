@@ -1,11 +1,13 @@
 import os
 import sys
-import numpy as np
+import numpy as npS
 import matplotlib.pyplot as plt
-from src.compress_sensing import *
-from src.utility import *
 from PIL import Image, ImageOps
 import sys
+
+sys.path.append('..')
+from src.compress_sensing import *
+from src.utility import *
 from A_experiments.theta_exp_improved import *
 
 '''

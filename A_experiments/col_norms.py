@@ -10,9 +10,6 @@ from A_experiments.theta_exp_improved import *
 
 '''
 Exploring the col_norms as histograms.
-
-Current Thoughts:
-
 '''
 
 def dot_product_matrix_mod(img_arr, obs_type, num_cell, cell_size = None, blob_size = None, center = None):
@@ -45,29 +42,32 @@ def dot_product_matrix_mod(img_arr, obs_type, num_cell, cell_size = None, blob_s
         design_matrix = generate_design_matrix(measurement_matrix)
 
     
-    #plt.hist(col_norms, 200)
-    #plt.title(obs_type)
-    #x = design_matrix / col_norms 
+    
+     
     M = design_matrix.T @ design_matrix
     col_norms = np.linalg.norm(M, axis=0)
     M = M / col_norms
     np.fill_diagonal(M, 0)
-    return np.abs(M)
+
+    #plt.hist(col_norms, 200)
+    #plt.title(obs_type)
+    #x = design_matrix / col_norms
+    return np.abs(M), col_norms
 
 
-v1_dot = dot_product_matrix_mod(small_img_arr_gray, "V1", num_cell_300, cell_size, blob_size)
+v1_dot, v_norms = dot_product_matrix_mod(small_img_arr_gray, "V1", num_cell_300, cell_size, blob_size)
 bins = np.linspace(0, 0.35,50)
-plt.figure()
 plt.hist(v1_dot.flatten(), cumulative = False, density = True, label = "v1")
 
-pix_dot = dot_product_matrix_mod(small_img_arr_gray, "pixel", num_cell_300, cell_size, blob_size)
+pix_dot, pix_norms = dot_product_matrix_mod(small_img_arr_gray, "pixel", num_cell_300, cell_size, blob_size)
 plt.hist(pix_dot.flatten(), cumulative = False, density = True, label = "pixel")
 
-gauss_dot = dot_product_matrix_mod(small_img_arr_gray, "gaussian", num_cell_300, cell_size, blob_size)
+gauss_dot, gauss_norms = dot_product_matrix_mod(small_img_arr_gray, "gaussian", num_cell_300, cell_size, blob_size)
 plt.hist(gauss_dot.flatten(), cumulative = False, density = True, label = "gauss")
 
 plt.xlabel("Dot Product")
 plt.ylabel("Frequency")
 plt.legend()
 plt.yscale('log')
+plt.show()
 plt.savefig("Dot Hist") # saves a level above, 
