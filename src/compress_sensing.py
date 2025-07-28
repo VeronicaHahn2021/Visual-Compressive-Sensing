@@ -44,7 +44,7 @@ def generate_Y(W, img_arr):
     y = W @ img_arr.reshape(n * m, 1)
     return y
 
-def generate_V1_weights(num_cell, dim, cell_size, blob_size, center):
+def generate_V1_weights(num_cell, dim, cell_size, blob_size, center = None):
     # Store generated V1 cells in W
     n, m = dim
     W = V1_weights(num_cell, dim, cell_size, blob_size, center)
@@ -53,7 +53,7 @@ def generate_V1_weights(num_cell, dim, cell_size, blob_size, center):
     W = W.reshape(num_cell, n, m)
     return W
 
-def generate_V1_observation(img_arr, num_cell, cell_size, blob_size, center):
+def generate_V1_observation(img_arr, num_cell, cell_size, blob_size, center = None):
     ''' 
     Automatically generates variables needed for 
     data reconstruction using V1 weights.

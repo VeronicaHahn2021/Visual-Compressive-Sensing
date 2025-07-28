@@ -15,7 +15,7 @@ Big question associated with this folder:
 
 Current Thoughts:
     V1 mutual coherence is very bad, but reconstructions remain better
-        Currently investicgating why
+        Currently investigating why
     Hypothesis (Hyp): V1 observations end up with areas with values 0 and close to 0, so
         when we create the dot product matricies and normalize them, the dot products are being
         divided by something close to 0, 'blowing them up'
@@ -75,7 +75,7 @@ def compute_mutual_coherence(design_matrix) :
     Parameters
     ----------
 
-    A: array_like
+    design_matrix: array_like
         matrix with more than one column
 
     The how:
@@ -112,6 +112,19 @@ def dot_product_matrix(img_arr, obs_type, num_cell, cell_size = None, blob_size 
         Observation technique that are going to be used to 
         collect sample for reconstruction. Default set up to 'pixel'
         Supported observation : ['pixel', 'gaussian', 'V1'].
+
+    num_cell : int
+        Number of blobs that will be used to be 
+        determining which pixels to grab and use.
+
+    cell_size : int
+        Determines field size of opened and closed blob of data. 
+        Affect the data training.
+        
+    blob_size : int
+        Determines filed frequency on how frequently 
+        opened and closed area would appear. 
+        Affect the data training.
     '''
 
     if obs_type == 'V1':
@@ -144,10 +157,23 @@ def mutual_coherence_matrix(img_arr, n, num_cell, obs_type, cell_size = None, bl
         how many MC should be collected from one image, 
         with purpose of averaging and comparing
 
+    num_cell : int
+        Number of blobs that will be used to be 
+        determining which pixels to grab and use.
+
     obs_type: String
         Observation technique that are going to be used to 
         collect sample for reconstruction. Default set up to 'pixel'
         Supported observation : ['pixel', 'gaussian', 'V1']. 
+
+    cell_size : int
+        Determines field size of opened and closed blob of data. 
+        Affect the data training.
+        
+    blob_size : int
+        Determines filed frequency on how frequently 
+        opened and closed area would appear. 
+        Affect the data training.
     
     The how:
     1. Create array M, will be our final list of MCs

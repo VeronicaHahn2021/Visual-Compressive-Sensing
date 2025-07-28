@@ -24,8 +24,11 @@ def compute_mutual_coherence(design_matrix, epsilon = 0) :
     Parameters
     ----------
 
-    A: array_like
+    design_matrix: array_like
         matrix with more than one column
+
+    epsilon: int
+        max col norm we want to be kept
 
     The how:
     1. normalize columns of A (divide each by its norm):
@@ -40,18 +43,21 @@ def compute_mutual_coherence(design_matrix, epsilon = 0) :
             add dot to total_dot
         return max(total_dot)
 
+    Mod:
+    1. if the column's norm is less than epsilon, replace the column with 0s
+
     '''
     rows, columns = design_matrix.shape
     col_norms = np.linalg.norm(design_matrix, axis=0)
 
-    #if the column's norm is less than epsilon, replace the column with 0s
+    #should we be doing this for every type or just V1?
     for i in range(columns):
-        if col_norms[i] <= epsilon:
-            #print(str(i))
-            #print(str(col_norms[i]))
+        if col_norms[i] >= epsilon:
+            # print(str(i))
+            # print(str(col_norms[i]))
             design_matrix[:,i] = 0
 
-    x = design_matrix / col_norms + epsilon
+    x = design_matrix / col_norms
     M = x.T @ x 
     np.fill_diagonal(M, 0) 
     return np.abs(M).flatten().max() 
@@ -71,12 +77,28 @@ def mutual_coherence_matrix_mod(img_arr, n, num_cell, obs_type, cell_size = None
         how many MC should be collected from one image, 
         with purpose of averaging and comparing
 
+    num_cell : int
+        Number of blobs that will be used to be 
+        determining which pixels to grab and use.
+
     obs_type: String
         Observation technique that are going to be used to 
         collect sample for reconstruction. Default set up to 'pixel'
         Supported observation : ['pixel', 'gaussian', 'V1']. 
+
+    cell_size : int
+        Determines field size of opened and closed blob of data. 
+        Affect the data training.
+        
+    blob_size : int
+        Determines filed frequency on how frequently 
+        opened and closed area would appear. 
+        Affect the data training. 
     
-    The how:
+    The how:    col_norms = np.linalg.norm(design_matrix, axis=0)
+    x = design_matrix / (col_norms + epsilon)
+    M = x.T @ x 
+    np.fill_diagonal(M, 0) 
     1. Create array M, will be our final list of MCs
     2. for n times, generate design_matrix and compute mutual coherence depending on ovserbation type
         add each MC value to M
@@ -102,27 +124,16 @@ def mutual_coherence_matrix_mod(img_arr, n, num_cell, obs_type, cell_size = None
             M[i] = compute_mutual_coherence(design_matrix, epsilon)
     return M
 
-
-epsilon = 0.01
+epsilon = 20
 num = 5
-#Plot Mutual Coherence - WORKING for small_gray
+#Plot Modded Mutual Coherence
 v1_mc = mutual_coherence_matrix_mod(small_img_arr_gray, num, num_cell_300,  "V1", blob_size, cell_size, epsilon = epsilon)
 pix_mc = mutual_coherence_matrix_mod(small_img_arr_gray, num, num_cell_300, "pixel", epsilon = epsilon)
 gaus_mc = mutual_coherence_matrix_mod(small_img_arr_gray, num,num_cell_300, "gaussian", epsilon = epsilon)
 all_mc = [v1_mc, pix_mc, gaus_mc]
 fig = plt.figure()
-fig.suptitle(str(num) + " MC per Type", fontsize=14)
+fig.suptitle(str(num) + " MC per Type, Epsilon = " + str(epsilon), fontsize=14)
 ax = fig.add_subplot()
 ax.boxplot(all_mc, tick_labels=['V1', 'pixel','Gaussian'])
 plt.show()
 plt.savefig("Less than Epsilon Mc")
-'''
-
-measurement_matrix, Y = generate_V1_observation(small_img_arr_gray, num_cell_300, cell_size, blob_size, center = None)
-design_matrix = generate_design_matrix(measurement_matrix)
-
-rows, columns = design_matrix.shape
-col_norms = np.linalg.norm(design_matrix, axis=0)
-
-v1_mc = mutual_coherence_matrix_mod(small_img_arr_gray, 1, num_cell_300,  "V1", blob_size, cell_size, epsilon = 1)
-'''

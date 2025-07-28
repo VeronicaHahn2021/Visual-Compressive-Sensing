@@ -41,7 +41,7 @@ def compute_mutual_coherence(design_matrix, epsilon = 0) :
 
     '''
     col_norms = np.linalg.norm(design_matrix, axis=0)
-    x = design_matrix / col_norms + epsilon
+    x = design_matrix / (col_norms + epsilon)
     M = x.T @ x 
     np.fill_diagonal(M, 0) 
     return np.abs(M).flatten().max() 
@@ -65,6 +65,9 @@ def mutual_coherence_matrix(img_arr, n, num_cell, obs_type, cell_size = None, bl
         Observation technique that are going to be used to 
         collect sample for reconstruction. Default set up to 'pixel'
         Supported observation : ['pixel', 'gaussian', 'V1']. 
+
+    epsilon: int
+        tuning parameter when dividing by col norms
     
     The how:
     1. Create array M, will be our final list of MCs
@@ -93,15 +96,15 @@ def mutual_coherence_matrix(img_arr, n, num_cell, obs_type, cell_size = None, bl
     return M
 
 
-epsilon = 0.01
+epsilon = 100
 num = 5
-#Plot Mutual Coherence - WORKING for small_gray
+#Plot Modded Mutual Coherence
 v1_mc = mutual_coherence_matrix(small_img_arr_gray, num, num_cell_300,  "V1", blob_size, cell_size, epsilon = epsilon)
 pix_mc = mutual_coherence_matrix(small_img_arr_gray, num, num_cell_300, "pixel", epsilon = epsilon)
 gaus_mc = mutual_coherence_matrix(small_img_arr_gray, num,num_cell_300, "gaussian", epsilon = epsilon)
 all_mc = [v1_mc, pix_mc, gaus_mc]
 fig = plt.figure()
-fig.suptitle(str(num) + " MC per Type", fontsize=14)
+fig.suptitle(str(num) + " MC per Type, Epsilon = " + str(epsilon), fontsize=14)
 ax = fig.add_subplot()
 ax.boxplot(all_mc, tick_labels=['V1', 'pixel','Gaussian'])
 plt.show()
