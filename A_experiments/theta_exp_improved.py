@@ -19,6 +19,8 @@ Current Thoughts:
     Hypothesis (Hyp): V1 observations end up with areas with values 0 and close to 0, so
         when we create the dot product matricies and normalize them, the dot products are being
         divided by something close to 0, 'blowing them up'
+    Specturm
+        Look at the SVD of design matrix
 
 W = measurement_matrix
 U = basis_matrix
