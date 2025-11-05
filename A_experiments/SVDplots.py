@@ -15,7 +15,7 @@ from A_experiments.theta_exp_improved import *
 Plot the spectrum of theta. Measure of sparsity?
 '''
 
-#Graph the singular values of theta
+# Find the singular values of theta
 measurement_matrix_V1, V1_y_300 = generate_V1_observation(small_img_arr_gray, num_cell_300, cell_size, blob_size, None)
 theta_V1 = generate_design_matrix(measurement_matrix_V1)
 
