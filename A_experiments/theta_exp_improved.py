@@ -279,7 +279,7 @@ def high_freq_table(img_arr, obs_type, num_cell, cell_size = None, blob_size = N
 
 def generate_coeff_vector(img_arr, num_cell, cell_size, blob_size):
     '''
-    Generates the coeffiecient vector for frequencies present in img
+    Generates the coeffiecient vector for frequencies present in img_arr
 
     Parameters
     ----------
