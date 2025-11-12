@@ -17,7 +17,7 @@ Compare the Fourier coefficients to singular values of theta.
 # Find the true coefficients of theta
 coeffs_true = generate_coeff_vector(small_img_arr_gray, num_cell_300, cell_size, blob_size)
 U_c_true, S_c_true, V_c_true = np.linalg.svd(coeffs_true)
-a_true = V_c_true.T * coeffs_true
+a_true = np.reshape(V_c_true.T * coeffs_true,-1)
 
 
 # Find the singular values of theta
@@ -49,46 +49,42 @@ reconst_gray_300_gauss = reconstruct(measurement_matrix_gauss, gaussian_y_300, a
 coeffs_est_gauss = generate_coeff_vector(reconst_gray_300_gauss, num_cell_300, cell_size, blob_size)
 
 
-# find a_i from coefficient vectors from each obs type
+# find a_i from coefficient vectors for each obs type
 U_c_V1, S_c_V1, V_c_V1 = np.linalg.svd(coeffs_est_V1)
-a_est_V1 = V_c_V1.T * coeffs_est_V1
+a_est_V1 = np.reshape(V_c_V1.T * coeffs_est_V1,-1)
 
 U_c_pix, S_c_pix, V_c_pix = np.linalg.svd(coeffs_est_pix)
-a_est_pix = V_c_pix.T * coeffs_est_pix
+a_est_pix = np.reshape(V_c_pix.T * coeffs_est_pix,-1)
 
 U_c_gauss, S_c_gauss, V_c_gauss = np.linalg.svd(coeffs_est_gauss)
-a_est_gauss = V_c_gauss.T * coeffs_est_gauss
+a_est_gauss = np.reshape(V_c_gauss.T * coeffs_est_gauss,-1)
 
 # Plot a_i
 plt.figure()
 
-k=29
-plt.plot([i for i in range(30)], a_true[k], '.', label = "true")
-plt.plot([i for i in range(30)], a_est_V1[k], 'x', label = "V1")
-plt.plot([i for i in range(30)], a_est_pix[k], '+',  label = "pix")
-plt.plot([i for i in range(30)], a_est_gauss[k], '*', label = "gauss")
+plt.plot([i for i in range(900)], np.abs(a_true), '.', label = "true")
+plt.plot([i for i in range(900)], np.abs(a_est_V1), 'x', label = "V1")
+plt.plot([i for i in range(900)], np.abs(a_est_pix), '+',  label = "pix")
+plt.plot([i for i in range(900)], np.abs(a_est_gauss), '*', label = "gauss")
 
 
-plt.ylabel("a_i")
+plt.ylabel("|a_i|")
 plt.xlabel("i")
-plt.title("a_i for row " + str(k))
+plt.yscale('log')
+plt.title("|a_i| for all Observation Types and True")
 plt.legend()
 plt.show()
 
 # Plot for V1 and true only
 plt.figure()
 
-plt.plot([i for i in range(30)], a_true[k], '.', label = "true")
-plt.plot([i for i in range(30)], a_est_V1[k], 'x', label = "V1")
+plt.plot([i for i in range(900)], np.abs(a_true), '.', label = "true")
+plt.plot([i for i in range(900)], np.abs(a_est_V1), 'x', label = "V1")
 
-plt.ylabel("a_i")
+plt.ylabel("|a_i|")
 plt.xlabel("i")
-plt.title("a_i for row " + str(k))
+plt.yscale('log')
+plt.title("|a_i| for V1 and True")
 plt.legend()
 plt.show()
 
-'''
-plt.figure()
-plt.imshow(a_true)
-plt.colorbar()
-plt.title("a_i heatmap")'''
