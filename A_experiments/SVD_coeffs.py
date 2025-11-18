@@ -49,42 +49,67 @@ reconst_gray_300_gauss = reconstruct(measurement_matrix_gauss, gaussian_y_300, a
 coeffs_est_gauss = generate_coeff_vector(reconst_gray_300_gauss, num_cell_300, cell_size, blob_size)
 
 
-# find a_i from coefficient vectors for each obs type
+# find principal components from coefficient vectors for each obs type
 U_c_V1, S_c_V1, V_c_V1 = np.linalg.svd(coeffs_est_V1)
-a_est_V1 = np.reshape(V_c_V1.T * coeffs_est_V1,-1)
+a_est_V1 = np.reshape(V_c_V1 * coeffs_est_V1,-1)
 
 U_c_pix, S_c_pix, V_c_pix = np.linalg.svd(coeffs_est_pix)
-a_est_pix = np.reshape(V_c_pix.T * coeffs_est_pix,-1)
+a_est_pix = np.reshape(V_c_pix * coeffs_est_pix,-1)
 
 U_c_gauss, S_c_gauss, V_c_gauss = np.linalg.svd(coeffs_est_gauss)
-a_est_gauss = np.reshape(V_c_gauss.T * coeffs_est_gauss,-1)
+a_est_gauss = np.reshape(V_c_gauss * coeffs_est_gauss,-1)
 
-# Plot a_i
+# Plot principal components
+
 plt.figure()
+sc = plt.scatter(np.abs(a_est_V1), np.abs(a_true), c=[i for i in range(900)])
+plt.colorbar(sc)
 
+plt.ylabel("true principal component")
+plt.xlabel("V1 principal component")
+plt.yscale('log')
+plt.xscale('log')
+plt.title("Comparing V1 to True")
+
+plt.show()
+
+'''
+plt.figure()
 plt.plot([i for i in range(900)], np.abs(a_true), '.', label = "true")
+
+
+plt.ylabel("Principal Component")
+plt.xlabel("i")
+plt.yscale('log')
+plt.title("Principal Component for True Coefficients (300 observations)")
+plt.ylim(bottom=10 ** (-6))
+plt.show()
+
+
+plt.figure()
 plt.plot([i for i in range(900)], np.abs(a_est_V1), 'x', label = "V1")
+plt.ylabel("Principal Component")
+plt.xlabel("i")
+plt.yscale('log')
+plt.title("Principal Component for V1 Coefficients (300 observations)")
+plt.ylim(bottom=10 ** (-6))
+plt.show()
+
+plt.figure()
 plt.plot([i for i in range(900)], np.abs(a_est_pix), '+',  label = "pix")
-plt.plot([i for i in range(900)], np.abs(a_est_gauss), '*', label = "gauss")
-
-
-plt.ylabel("|a_i|")
+plt.ylabel("Principal Component")
 plt.xlabel("i")
 plt.yscale('log')
-plt.title("|a_i| for all Observation Types and True")
-plt.legend()
+plt.title("Principal Component for Pix Coefficients (300 observations)")
+plt.ylim(bottom=10 ** (-6))
 plt.show()
 
-# Plot for V1 and true only
 plt.figure()
-
-plt.plot([i for i in range(900)], np.abs(a_true), '.', label = "true")
-plt.plot([i for i in range(900)], np.abs(a_est_V1), 'x', label = "V1")
-
-plt.ylabel("|a_i|")
+plt.plot([i for i in range(900)], np.abs(a_est_gauss), '*', label = "gauss")
+plt.ylabel("Principal Component")
 plt.xlabel("i")
 plt.yscale('log')
-plt.title("|a_i| for V1 and True")
-plt.legend()
+plt.title("Principal Component for Gaussian Coefficients (300 observations)")
+plt.ylim(bottom=10 ** (-6))
 plt.show()
-
+'''

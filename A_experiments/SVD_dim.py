@@ -74,11 +74,8 @@ for i in range(n):
     
 # Plot the dimensions of theta for comparison
 plt.figure()
-plt.plot([i for i in range(n)], dim_arr_V1, label="V1")
-plt.plot([i for i in range(n)], dim_arr_pix, label="pix")
-plt.plot([i for i in range(n)], dim_arr_gauss, label="gauss")
-plt.xlabel("# run")
+plt.boxplot( [dim_arr_V1, dim_arr_pix, dim_arr_gauss], tick_labels=['V1','Pix', "Gaussian"])
+
 plt.ylabel("Dimension")
 plt.title("Dimensions of Theta over " + str(n) + " runs")
-plt.legend()
 plt.show()
