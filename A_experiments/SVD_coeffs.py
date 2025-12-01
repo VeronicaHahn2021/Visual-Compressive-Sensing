@@ -61,6 +61,7 @@ a_est_gauss = np.reshape(V_c_gauss * coeffs_est_gauss,-1)
 
 # Plot principal components
 
+'''
 plt.figure()
 sc = plt.scatter(np.abs(a_est_V1), np.abs(a_true), c=[i for i in range(900)])
 plt.colorbar(sc)
@@ -72,6 +73,7 @@ plt.xscale('log')
 plt.title("Comparing V1 to True")
 
 plt.show()
+'''
 
 '''
 plt.figure()
@@ -113,3 +115,25 @@ plt.title("Principal Component for Gaussian Coefficients (300 observations)")
 plt.ylim(bottom=10 ** (-6))
 plt.show()
 '''
+
+
+# mean squared error
+
+squared_error = np.empty(900)
+
+for i in range(900):
+    squared_error[i] = (a_true[i] - a_est_V1[i]) ** 2
+
+mse = np.sum(squared_error) / 900
+
+im = process_image(small_img,False)
+true_pixels = np.array(im)
+true_pixels = true_pixels.reshape(1,900)
+
+v1_pixels = reconst_gray_300_v1.reshape(1,900)
+
+pixel_squared_error = np.empty(900)
+for i in range(900):
+    pixel_squared_error[i] = (true_pixels[0,i] - v1_pixels[0,i]) ** 2
+
+mean_pixel_error = np.sum(pixel_squared_error) / 900
