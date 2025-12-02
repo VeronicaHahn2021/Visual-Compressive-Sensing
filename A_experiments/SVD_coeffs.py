@@ -117,14 +117,34 @@ plt.show()
 '''
 
 
-# mean squared error
+# compare squared error for principal components and raw pixel values
 
-squared_error = np.empty(900)
+def compute_squared_error(estimated, true):
+    '''Do this stuff'''
 
-for i in range(900):
-    squared_error[i] = (a_true[i] - a_est_V1[i]) ** 2
+    squared_error = np.empty(900)
 
-mse = np.sum(squared_error) / 900
+    for i in range(900):
+        squared_error[i] = (true[i] - estimated[i]) ** 2
+
+    return squared_error
+
+# plot squared error
+
+plt.figure()
+plt.plot([i for i in range(900)], compute_squared_error(a_est_V1, a_true), label="V1")
+plt.plot([i for i in range(900)], compute_squared_error(a_est_gauss, a_true), label="Gaussian")
+plt.plot([i for i in range(900)], compute_squared_error(a_est_pix, a_true), label="pix")
+plt.legend()
+plt.yscale('log')
+plt.xscale('log')
+plt.title("Error per component")
+plt.xlabel("index i")
+plt.ylabel("(a_true - a_est)^2")
+plt.show()
+
+
+mse = np.sum(compute_squared_error(a_est_V1,a_true)) / 900
 
 im = process_image(small_img,False)
 true_pixels = np.array(im)
@@ -137,3 +157,7 @@ for i in range(900):
     pixel_squared_error[i] = (true_pixels[0,i] - v1_pixels[0,i]) ** 2
 
 mean_pixel_error = np.sum(pixel_squared_error) / 900
+
+
+# Energy of the image
+energy = np.sum(true_pixels ** 2) / 900
