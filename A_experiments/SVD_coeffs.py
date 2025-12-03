@@ -61,64 +61,37 @@ a_est_gauss = np.reshape(V_c_gauss * coeffs_est_gauss,-1)
 
 # Plot principal components
 
-'''
-plt.figure()
-sc = plt.scatter(np.abs(a_est_V1), np.abs(a_true), c=[i for i in range(900)])
-plt.colorbar(sc)
+def make_scatter(est, true, xlabel, title, filename, figsize=(10, 8), dpi=200, marker_size=30, cmap='YlOrRd', alpha=0.5):
+    plt.figure(figsize=figsize, dpi=dpi)
+    sc = plt.scatter(np.abs(est), np.abs(true), 
+                     c=np.arange(len(est)), s=marker_size,
+                     cmap=cmap, alpha=alpha)
+    
+    plt.colorbar(sc).set_label('PC rank', rotation=270, labelpad=15) # add label to colorbar
 
-plt.ylabel("true principal component")
-plt.xlabel("V1 principal component")
-plt.yscale('log')
-plt.xscale('log')
-plt.title("Comparing V1 to True")
+    plt.xlabel(f"{xlabel} Principal Component")
+    plt.ylabel("True Principal Component")
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.title(title)
 
-plt.show()
-'''
+    # add y=x line
+    # visibal range on axes
+    xmin, xmax = plt.xlim() # min, max of x
+    ymin, ymax = plt.ylim() # min, max of y
+    low = max(xmin, ymin) # start at largest of 2 mins, so it doesn't go below
+    high = min(xmax, ymax) # end at smallest of 2 maxima -> doesn't go beyond
+    plt.plot([low, high], [low, high])
+    
+    plt.savefig(filename)
+    plt.close()
 
-'''
-plt.figure()
-plt.plot([i for i in range(900)], np.abs(a_true), '.', label = "true")
-
-
-plt.ylabel("Principal Component")
-plt.xlabel("i")
-plt.yscale('log')
-plt.title("Principal Component for True Coefficients (300 observations)")
-plt.ylim(bottom=10 ** (-6))
-plt.show()
-
-
-plt.figure()
-plt.plot([i for i in range(900)], np.abs(a_est_V1), 'x', label = "V1")
-plt.ylabel("Principal Component")
-plt.xlabel("i")
-plt.yscale('log')
-plt.title("Principal Component for V1 Coefficients (300 observations)")
-plt.ylim(bottom=10 ** (-6))
-plt.show()
-
-plt.figure()
-plt.plot([i for i in range(900)], np.abs(a_est_pix), '+',  label = "pix")
-plt.ylabel("Principal Component")
-plt.xlabel("i")
-plt.yscale('log')
-plt.title("Principal Component for Pix Coefficients (300 observations)")
-plt.ylim(bottom=10 ** (-6))
-plt.show()
-
-plt.figure()
-plt.plot([i for i in range(900)], np.abs(a_est_gauss), '*', label = "gauss")
-plt.ylabel("Principal Component")
-plt.xlabel("i")
-plt.yscale('log')
-plt.title("Principal Component for Gaussian Coefficients (300 observations)")
-plt.ylim(bottom=10 ** (-6))
-plt.show()
-'''
+#make_scatter(a_est_V1,   a_true, "V1", "V1 vs True (100 samples)", "V1_vs_True_100_YlOrRd.png", alpha=0.5)
+#make_scatter(a_est_pix,  a_true, "Pixel", "Pixel vs True (100 samples)", "Pixel_vs_True_100_YlOrRd.png")
+#make_scatter(a_est_gauss, a_true, "Gaussian", "Gaussian vs True (100 samples)", "Gaussian_vs_True_100_YlOrRd.png")
 
 
 # mean squared error
-
 squared_error = np.empty(900)
 
 for i in range(900):
@@ -137,3 +110,8 @@ for i in range(900):
     pixel_squared_error[i] = (true_pixels[0,i] - v1_pixels[0,i]) ** 2
 
 mean_pixel_error = np.sum(pixel_squared_error) / 900
+
+print("PC MSE:", mse)
+print("Pixel MSE:", mean_pixel_error)
+
+
