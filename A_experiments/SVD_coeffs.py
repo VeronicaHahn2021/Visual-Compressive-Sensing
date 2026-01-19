@@ -15,51 +15,75 @@ from A_experiments.theta_exp_improved import *
 Compare the Fourier coefficients to singular values of theta.
 '''
 # Find the true coefficients of theta
-coeffs_true = generate_coeff_vector(small_img_arr_gray, num_cell_300, cell_size, blob_size)
-# U_c_true, S_c_true, Vh_c_true = np.linalg.svd(coeffs_true)
+coeffs_true = generate_coeff_vector(small_img_arr_gray, num_cell_100, cell_size, blob_size)
+U_c_true, S_c_true, Vh_c_true = np.linalg.svd(coeffs_true)
+
 
 
 # Find the singular values of theta
-measurement_matrix_V1, V1_y_300 = generate_V1_observation(small_img_arr_gray, num_cell_300, cell_size, blob_size, None)
+measurement_matrix_V1, V1_y_100 = generate_V1_observation(small_img_arr_gray, num_cell_100, cell_size, blob_size, None)
 theta_V1 = generate_design_matrix(measurement_matrix_V1)
 
 U_V1, S_V1, Vh_V1 = np.linalg.svd(theta_V1)
 
-measurement_matrix_pix, pixel_y_300 = generate_pixel_observation(small_img_arr_gray, num_cell_300)
+measurement_matrix_pix, pixel_y_100 = generate_pixel_observation(small_img_arr_gray, num_cell_100)
 theta_pix = generate_design_matrix(measurement_matrix_pix)
 
 U_pix, S_pix, Vh_pix = np.linalg.svd(theta_pix)
 
-measurement_matrix_gauss, gaussian_y_300 = generate_gaussian_observation(small_img_arr_gray, num_cell_300)
+measurement_matrix_gauss, gaussian_y_100 = generate_gaussian_observation(small_img_arr_gray, num_cell_100)
 theta_gauss = generate_design_matrix(measurement_matrix_gauss)
 
 U_gauss, S_gauss, Vh_gauss = np.linalg.svd(theta_gauss)
 
 # Find the estimated coefficients for each observation type
-reconst_gray_300_v1 = reconstruct(measurement_matrix_V1, V1_y_300, alpha)
-coeffs_est_V1 = generate_coeff_vector(reconst_gray_300_v1, num_cell_300, cell_size, blob_size)
-
-reconst_gray_300_pix = reconstruct(measurement_matrix_pix, pixel_y_300, alpha)
-coeffs_est_pix = generate_coeff_vector(reconst_gray_300_pix, num_cell_300, cell_size, blob_size)
+reconst_gray_100_v1 = reconstruct(measurement_matrix_V1, V1_y_100, alpha)
+coeffs_est_V1 = generate_coeff_vector(reconst_gray_100_v1, num_cell_100, cell_size, blob_size)
 
 
-reconst_gray_300_gauss = reconstruct(measurement_matrix_gauss, gaussian_y_300, alpha)
-coeffs_est_gauss = generate_coeff_vector(reconst_gray_300_gauss, num_cell_300, cell_size, blob_size)
+reconst_gray_100_pix = reconstruct(measurement_matrix_pix, pixel_y_100, alpha)
+coeffs_est_pix = generate_coeff_vector(reconst_gray_100_pix, num_cell_100, cell_size, blob_size)
+
+
+reconst_gray_100_gauss = reconstruct(measurement_matrix_gauss, gaussian_y_100, alpha)
+coeffs_est_gauss = generate_coeff_vector(reconst_gray_100_gauss, num_cell_100, cell_size, blob_size)
 
 
 # find principal components from coefficient vectors for each obs type
-# get sensing matrix out out these and run again (must be 300 x 900)
-# U_c_V1, S_c_V1, Vh_c_V1 = np.linalg.svd(coeffs_est_V1) # run this w/ measurement_matrix_V1
+#U_c_V1, S_c_V1, Vh_c_V1 = np.linalg.svd(coeffs_est_V1)
 a_est_V1 = Vh_V1 @ coeffs_est_V1.flatten()
+a_true_V1 = Vh_V1 @ coeffs_true.flatten()
 
-
-# U_c_pix, S_c_pix, Vh_c_pix = np.linalg.svd(coeffs_est_pix)
+#U_c_pix, S_c_pix, Vh_c_pix = np.linalg.svd(coeffs_est_pix)
 a_est_pix = Vh_pix @ coeffs_est_pix.flatten()
+a_true_pix = Vh_pix @ coeffs_true.flatten()
 
-# U_c_gauss, S_c_gauss, Vh_c_gauss = np.linalg.svd(coeffs_est_gauss)
+#U_c_gauss, S_c_gauss, Vh_c_gauss = np.linalg.svd(coeffs_est_gauss)
 a_est_gauss = Vh_gauss @ coeffs_est_gauss.flatten()
+a_true_gauss = Vh_gauss @ coeffs_true.flatten()
 
-# Plot principal components
+
+# compare squared error for principal components and raw pixel values
+
+squared_error_V1 = (a_true_V1 - a_est_V1) ** 2
+mse_V1 = np.mean(squared_error_V1)
+
+
+im = process_image(small_img,False)
+true_pixels = np.array(im)
+true_pixels = true_pixels.reshape(1,900)
+
+v1_pixels = reconst_gray_100_v1.reshape(1,900)
+
+pixel_squared_error = np.empty(900)
+for i in range(900):
+    pixel_squared_error[i] = (true_pixels[0,i] - v1_pixels[0,i]) ** 2
+
+mean_pixel_error = np.mean(pixel_squared_error)
+
+print("PC mse_V1:", mse_V1)
+print("Pixel mse:", mean_pixel_error)
+
 
 def make_scatter(est, true, xlabel, title, filename, figsize=(10, 8), dpi=200, marker_size=30, cmap='YlOrRd', alpha=0.5):
     plt.figure(figsize=figsize, dpi=dpi)
@@ -83,39 +107,48 @@ def make_scatter(est, true, xlabel, title, filename, figsize=(10, 8), dpi=200, m
     high = min(xmax, ymax) # end at smallest of 2 maxima -> doesn't go beyond
     plt.plot([low, high], [low, high])
     
-    plt.savefig(filename)
-    plt.close()
-
-a_true_V1 = Vh_V1 @ coeffs_true.flatten()
-
-#make_scatter(a_est_V1,   a_true, "V1", "V1 vs True (100 samples)", "V1_vs_True_100_YlOrRd.png", alpha=0.5)
-#make_scatter(a_est_pix,  a_true, "Pixel", "Pixel vs True (100 samples)", "Pixel_vs_True_100_YlOrRd.png")
-#make_scatter(a_est_gauss, a_true, "Gaussian", "Gaussian vs True (100 samples)", "Gaussian_vs_True_100_YlOrRd.png")
+    #plt.savefig(filename)
+    #plt.close()
 
 
-# # mean squared error
-# squared_error = np.empty(900)
+#make_scatter(a_est_V1,   a_true_V1, "V1", "V1 vs True (100 samples)", "V1_vs_True_100_YlOrRd.png", alpha=0.5)
+#make_scatter(a_est_pix,  a_true_pix, "Pixel", "Pixel vs True (100 samples)", "Pixel_vs_True_100_YlOrRd.png")
+#make_scatter(a_est_gauss, a_true_gauss, "Gaussian", "Gaussian vs True (100 samples)", "Gaussian_vs_True_100_YlOrRd.png")
 
-# for i in range(900):
-#     squared_error[i] = (a_true[i] - a_est_V1[i]) ** 2
+def scatter_PCs(components, xlabel, title):
+    plt.figure(figsize=(10,8), dpi=200)
+    sc = plt.scatter([i for i in range(900)], components)
 
-squared_error = (a_true_V1 - a_est_V1) ** 2
+    plt.xlabel("Rank")
+    plt.ylabel(f"{xlabel} Principal Component")
+    #plt.xscale('log')
+    plt.yscale('log')
+    plt.title(title)
 
-mse = np.mean(squared_error)
-
-im = process_image(small_img,False)
-true_pixels = np.array(im)
-true_pixels = true_pixels.reshape(1,900)
-
-v1_pixels = reconst_gray_300_v1.reshape(1,900)
-
-pixel_squared_error = np.empty(900)
-for i in range(900):
-    pixel_squared_error[i] = (true_pixels[0,i] - v1_pixels[0,i]) ** 2
-
-mean_pixel_error = np.sum(pixel_squared_error) / 900
-
-print("PC MSE:", mse)
-print("Pixel MSE:", mean_pixel_error)
+#scatter_PCs(a_est_V1, "V1", "V1 (100 samples)")
+#scatter_PCs(a_true_V1, "V1 True", "V1 True (100 samples)")
+#scatter_PCs(a_est_pix, "Pixel", "Pixel (100 samples)")
+#scatter_PCs(a_est_gauss, "Gaussian", "Gaussian (100 samples)")
 
 
+def plot_errors(errors, xlabel,title):
+    plt.figure(figsize=(10,8), dpi=200)
+    sc = plt.plot([i for i in range(900)], errors)
+
+    plt.xlabel(f"{xlabel} Squared Error")
+    plt.ylabel("Index")
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.title(title)
+
+plt.figure(figsize=(10,8), dpi=200)
+plt.plot([i for i in range(900)], (a_true_V1 - a_est_V1) ** 2, label="V1")
+plt.plot([i for i in range(900)], (a_true_pix - a_est_pix) ** 2, label="Pixel")
+plt.plot([i for i in range(900)], (a_true_gauss - a_est_gauss) ** 2, label="Gaussian")
+
+plt.xlabel("Squared Error")
+plt.legend()
+plt.ylabel("Index")
+plt.xscale('log')
+plt.yscale('log')
+plt.title("Error Per Component (100 Samples)")
