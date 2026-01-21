@@ -82,8 +82,8 @@ for i in range(900):
 
 mean_pixel_error = np.mean(pixel_squared_error)
 
-print("PC mse_V1:", mse_V1)
-print("Pixel mse:", mean_pixel_error)
+# print("PC mse_V1:", mse_V1)
+# print("Pixel mse:", mean_pixel_error)
 
 
 def make_scatter(est, true, xlabel, title, filename, figsize=(10, 8), dpi=200, marker_size=30, cmap='YlOrRd', alpha=0.5):
@@ -221,23 +221,73 @@ PCs as pics
 
 '''
 
-pcs = {
-    "V1": a_est_V1,
-    "Pixel": a_est_pix,
-    "Gaussian": a_est_gauss
-}
-plt.figure(figsize=(12,4))
+# pcs = {
+#     "V1": a_est_V1,
+#     "Pixel": a_est_pix,
+#     "Gaussian": a_est_gauss
+# }
+# plt.figure(figsize=(12,4))
 
-for i, (label, img_flat) in enumerate(pcs.items()):
+# for i, (label, img_flat) in enumerate(pcs.items()):
+#     plt.subplot(1, 3, i+1)
+#     plt.imshow(img_flat.reshape(30,30), cmap='gray')
+#     plt.title(f'{label} Principal Component')
+#     plt.axis('off')
+
+# plt.suptitle("Principal Components (30 x 30) (300 Obs)", fontsize=15)
+# plt.tight_layout()
+# #plt.savefig("pc_images_300.png")
+# plt.close()
+pcs = {
+    "V1": Vh_V1[0, :],
+    "Pixel": Vh_pix[0, :],
+    "Gaussian": Vh_gauss[0, :]
+}
+
+plt.figure(figsize=(12,4))
+for i, (label, pc) in enumerate(pcs.items()):
     plt.subplot(1, 3, i+1)
-    plt.imshow(img_flat.reshape(30,30), cmap='gray')
-    plt.title(f'Reconstructed ({label})')
+    plt.imshow((pc.reshape(30,30)), cmap='gray')
+    plt.title(f'{label} First PC')
     plt.axis('off')
 
-plt.suptitle("Reconstructed Images from PC (300 Obs)", fontsize=15)
+plt.suptitle("First Principal Component (30 x 30) (300 Obs)", fontsize=15)
 plt.tight_layout()
-#plt.savefig("pc_images_300.png")
+#plt.savefig("pc_first_images_300.png", dpi=300)
 plt.close()
+
+pcs_top3 = {
+    "V1": Vh_V1[:3, :],      # first 3 PCs
+    "Pixel": Vh_pix[:3, :],
+    "Gaussian": Vh_gauss[:3, :]
+}
+
+plt.figure(figsize=(12, 8))
+
+methods = list(pcs_top3.keys())
+num_pcs = 3
+
+for row, method in enumerate(methods):
+    for col in range(num_pcs):
+        pc = pcs_top3[method][col, :].reshape(30, 30)
+        ax = plt.subplot(len(methods), num_pcs, row*num_pcs + col + 1)
+        ax.imshow((pc), cmap='gray')
+        ax.axis('off')
+        ax.set_title(f"PC {col+1}", fontsize=10)  # label for each pc
+        if row == 0:
+            ax.set_title(f"PC {col+1}", fontsize=10)
+        
+        # method label
+        if col == 0:
+            ax.annotate(method, xy=(-0.2, 0.5), xycoords='axes fraction',
+                        rotation=90, ha='right', va='center',
+                        fontsize=12,)
+
+plt.suptitle("Top 3 Principal Components per Method (30x30) (300 Obs)", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.95])
+#plt.savefig("pc_top3_images_300_labeled.png", dpi=300)
+plt.close()
+
 
 '''
 Sparcity of coeffs vectors - histogram of entries in coeffs vectors
@@ -251,21 +301,49 @@ coeff_vectors = {
     "Gaussian Estimated": coeffs_est_gauss.flatten()
 }
 
-bins = np.logspace(-1, 1, 50) #bins for histogram
+bins = np.linspace(0, 1.0, 50)  # linear bins
 
 plt.figure(figsize=(16, 4))
 
 for i, (label, coeffs) in enumerate(coeff_vectors.items()):
-    plt.subplot(1, 4, i+1)
-    plt.hist(np.abs(coeffs), bins=bins, alpha=0.7, color='C'+str(i))
-    plt.xscale('log')
-    plt.yscale('log')
+    # counts, bin_edges = np.histogram(np.abs(coeffs), bins=bins)
+    # print(f"{label:20s} total count in bins = {counts.sum()}")
+    plt.subplot(1, 4, i + 1)
+    plt.hist(np.abs(coeffs), bins=bins, edgecolor='black', color='C'+str(i))
     plt.xlabel("Absolute Coefficient Value")
     plt.ylabel("Number of Coefficients")
     plt.title(label)
-    plt.grid(True, which="both", ls="--", lw=0.5)
+    plt.ylim(0, 12)  # changed y-axis range
+    plt.grid(alpha=0.3)
 
-plt.suptitle("Sparsity of Coefficient Vectors (300)", fontsize=16)
+plt.suptitle("Coefficient Histograms (300 Obs)", fontsize=15)
 plt.tight_layout(rect=[0, 0, 1, 0.95])
-#plt.savefig("coeffs_sparsity_comparison_300.png")
+#plt.savefig("coeff_histograms_fixed_300.png", dpi=300)
+plt.close()
+
+print("Number of coefficients <0.1 and <0.5 (300 Obs):")
+for label, coeffs in coeff_vectors.items():
+    less_than_01 = np.sum(np.abs(coeffs) < 0.1)
+    less_than_05 = np.sum(np.abs(coeffs) < 0.5)
+    print(f"{label:15s}  <0.1: {less_than_01:4d},  <0.5: {less_than_05:4d}")
+
+
+plt.figure(figsize=(6, 5))
+
+for label, coeffs in coeff_vectors.items():
+    abs_coeffs = np.sort(np.abs(coeffs))
+    cdf = np.arange(1, len(abs_coeffs) + 1) / len(abs_coeffs)
+    plt.plot(abs_coeffs, cdf, label=label)
+
+plt.xlabel("Absolute Coefficient Value")
+plt.ylabel("CDF")
+plt.title("CDF of Coefficients (300 Obs)")
+plt.legend()
+plt.grid(alpha=0.3)
+
+plt.xlim(0, 1)
+plt.ylim(0, 1)
+
+plt.tight_layout()
+#plt.savefig("coeff_cdf_zoom_300.png", dpi=300)
 plt.close()
