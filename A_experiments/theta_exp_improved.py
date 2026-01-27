@@ -401,3 +401,28 @@ def generate_Dc(img_arr, obs_type, num_cell, norm = 1, cell_size = None, blob_si
     else:
         return np.linalg.norm(dot_vec @ coeffs, norm)
 
+'''
+MC plot
+'''
+
+def MC_box_plot(num_runs, num_cell):
+    # mutual coherence for each observation type
+    mc_v1 = mutual_coherence_matrix(small_img_arr_gray, n=num_runs, num_cell=num_cell, obs_type='V1', cell_size=cell_size, blob_size=blob_size)
+    mc_pixel = mutual_coherence_matrix(small_img_arr_gray, n=num_runs, num_cell=num_cell, obs_type='pixel')
+    mc_gauss = mutual_coherence_matrix(small_img_arr_gray, n=num_runs, num_cell=num_cell, obs_type='gaussian')
+
+    data = [mc_v1, mc_pixel, mc_gauss]
+
+    plt.figure(figsize=(8,6))
+    plt.boxplot(data, labels=['V1', 'Pixel', 'Gaussian'])
+    plt.ylabel("Mutual Coherence")
+    plt.title(f"Mutual Coherence ({num_runs} runs, {num_cell} blobs)")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.savefig(f"MC_box_plot_{num_runs}_runs_{num_cell}_blobs.svg")
+
+MC_box_plot(20, num_cell_100)
+MC_box_plot(20, num_cell_300)
+
+MC_box_plot(100, num_cell_100)
+MC_box_plot(100, num_cell_300)
+
