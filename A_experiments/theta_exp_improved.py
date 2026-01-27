@@ -420,9 +420,9 @@ def MC_box_plot(num_runs, num_cell):
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.savefig(f"MC_box_plot_{num_runs}_runs_{num_cell}_blobs.svg")
 
-MC_box_plot(20, num_cell_100)
-MC_box_plot(20, num_cell_300)
+# MC_box_plot(20, num_cell_100)
+# MC_box_plot(20, num_cell_300)
 
-MC_box_plot(100, num_cell_100)
-MC_box_plot(100, num_cell_300)
+# MC_box_plot(100, num_cell_100)
+# MC_box_plot(100, num_cell_300)
 
