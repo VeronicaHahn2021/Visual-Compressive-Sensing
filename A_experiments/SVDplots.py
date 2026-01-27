@@ -18,17 +18,17 @@ Plot the spectrum of theta. Measure of sparsity?
 # compute singular values for a given number of observations
 def compute_singular_values(num_cell):
     # V1
-    measurement_matrix_V1, V1_y_300 = generate_V1_observation(small_img_arr_gray, num_cell, cell_size, blob_size, None)
+    measurement_matrix_V1, V1_y = generate_V1_observation(small_img_arr_gray, num_cell, cell_size, blob_size, None)
     theta_V1 = generate_design_matrix(measurement_matrix_V1)
     U, S_V1, V = np.linalg.svd(theta_V1)
     
     # pix
-    measurement_matrix_pix, V1_y_300 = generate_pixel_observation(small_img_arr_gray, num_cell)
+    measurement_matrix_pix, V1_y = generate_pixel_observation(small_img_arr_gray, num_cell)
     theta_pix = generate_design_matrix(measurement_matrix_pix)
     U, S_pix, V = np.linalg.svd(theta_pix)
     
     # gauss
-    measurement_matrix_gauss, V1_y_300 = generate_gaussian_observation(small_img_arr_gray, num_cell)
+    measurement_matrix_gauss, V1_y = generate_gaussian_observation(small_img_arr_gray, num_cell)
     theta_gauss = generate_design_matrix(measurement_matrix_gauss)
     U, S_gauss, V = np.linalg.svd(theta_gauss)
     
