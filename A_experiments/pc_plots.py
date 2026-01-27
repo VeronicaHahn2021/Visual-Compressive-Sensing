@@ -114,13 +114,7 @@ def pc_scatter_plots(results, num_obs, filename, cmap='cool'):
         true = results[num_obs][method]["a_true"]
 
         # make scatter plot
-        sc = ax.scatter(
-            np.abs(est), np.abs(true),
-            c=np.arange(len(est)),
-            s = 30,
-            cmap=cmap,
-            alpha=0.5
-        )
+        sc = ax.scatter(np.abs(est), np.abs(true), c=np.arange(len(est)), s = 30, cmap=cmap, alpha=0.5)
 
         # y = x line
         xmin, xmax = ax.get_xlim()
@@ -176,8 +170,7 @@ def compare_smoothed_errors(results, filename):
 '''
 PCs as pics
 '''
-def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(12, 8), fileName=None
-):
+def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(12, 8), fileName=None):
     methods = ["V1", "Pixel", "Gaussian"]
     n_methods = len(methods)
 
@@ -198,16 +191,8 @@ def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(
 
             # method label
             if col == 0:
-                ax.annotate(
-                    method,
-                    xy=(-0.25, 0.5),
-                    xycoords="axes fraction",
-                    rotation=90,
-                    ha="right",
-                    va="center",
-                    fontsize=12
-                )
-
+                ax.annotate(method, xy=(-0.25, 0.5), xycoords="axes fraction", rotation=90, ha="right", va="center", fontsize=12)
+                
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(fileName, dpi=300)
     plt.suptitle(title, fontsize=16)
