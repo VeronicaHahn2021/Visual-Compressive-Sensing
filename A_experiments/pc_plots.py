@@ -114,13 +114,7 @@ def pc_scatter_plots(results, num_obs, filename, cmap='cool'):
         true = results[num_obs][method]["a_true"]
 
         # make scatter plot
-        sc = ax.scatter(
-            np.abs(est), np.abs(true),
-            c=np.arange(len(est)),
-            s = 30,
-            cmap=cmap,
-            alpha=0.5
-        )
+        sc = ax.scatter(np.abs(est), np.abs(true), c=np.arange(len(est)), s = 30, cmap=cmap, alpha=0.5)
 
         # y = x line
         xmin, xmax = ax.get_xlim()
@@ -176,8 +170,36 @@ def compare_smoothed_errors(results, filename):
 '''
 PCs as pics
 '''
-def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(12, 8), fileName=None
-):
+
+# top of each method
+def plot_first_pc(results, num_obs, cmap="gray", title=None, figsize=(12, 4), fileName=None):
+    methods = ["V1", "Pixel", "Gaussian"]
+    n_methods = len(methods)
+    
+    plt.figure(figsize=figsize)
+    
+    for i, method in enumerate(methods):
+        pc = results[num_obs][method]["Vh"][0, :].reshape(30, 30)
+        ax = plt.subplot(1, n_methods, i+1)
+        ax.imshow(pc, cmap=cmap)
+        ax.axis("off")
+        ax.set_title(f'{method} First PC', fontsize=12)
+
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout()
+    plt.savefig(fileName, dpi=300)
+    plt.close()
+
+plot_first_pc(results, num_obs=100,
+              title="First Principal Component (30 x 30) (100 Obs)",
+              fileName="pc_first_images_100.svg")
+
+plot_first_pc(results, num_obs=300,
+              title="First Principal Component (30 x 30) (300 Obs)",
+              fileName="pc_first_images_300.svg")
+
+# top 3 of each method
+def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(12, 8), fileName=None):
     methods = ["V1", "Pixel", "Gaussian"]
     n_methods = len(methods)
 
@@ -198,29 +220,21 @@ def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(
 
             # method label
             if col == 0:
-                ax.annotate(
-                    method,
-                    xy=(-0.25, 0.5),
-                    xycoords="axes fraction",
-                    rotation=90,
-                    ha="right",
-                    va="center",
-                    fontsize=12
-                )
-
+                ax.annotate(method, xy=(-0.25, 0.5), xycoords="axes fraction", rotation=90, ha="right", va="center", fontsize=12)
+                
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(fileName, dpi=300)
     plt.suptitle(title, fontsize=16)
     plt.close()
 
-plot_top_pcs(results, num_obs=100, num_pcs=3,
-                title="Top 3 Principal Components per Method (30×30) (100 obs)",
-                fileName="pc_top3_images_100_labeled.svg"
-)
-plot_top_pcs(results, num_obs=300, num_pcs=3,
-                title="Top 3 Principal Components per Method (30×30) (300 obs)",
-                fileName="pc_top3_images_300_labeled.svg"
-)
+# plot_top_pcs(results, num_obs=100, num_pcs=3,
+#                 title="Top 3 Principal Components per Method (30×30) (100 obs)",
+#                 fileName="pc_top3_images_100_labeled.svg"
+# )
+# plot_top_pcs(results, num_obs=300, num_pcs=3,
+#                 title="Top 3 Principal Components per Method (30×30) (300 obs)",
+#                 fileName="pc_top3_images_300_labeled.svg"
+# )
 
 '''
 Sparcity of coeffs vectors - histogram of entries in coeffs vectors
