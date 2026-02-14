@@ -1,17 +1,18 @@
-
 import os
 import sys
+import numpy as npS
 import matplotlib.pyplot as plt
 from PIL import Image, ImageOps
 import sys
+import seaborn as sns
+import pandas as pd
+
 
 sys.path.append('..')
 from src.compress_sensing import *
 from src.utility import *
 from A_experiments.theta_exp_improved import *
 
-import numpy as np
-from src.utility import *
 
 # patch sizes aand n values from paper
 #  d ∈ {8 × 8,16 × 16,32 × 32}
@@ -25,10 +26,15 @@ from src.utility import *
 PATCH_SIZE = 32
 N_OBS = 256
 ALPHA = 1
-CELL_SIZE = 7
-BLOB_SIZE = 2
-
-# TODO: what are the V1 params s and f?
+CELL_SIZE = 50
+BLOB_SIZE = 6
+'''
+58 = eye
+169 = pattern
+206 = stain 1
+235 = stain 2
+'''
+PATCH_IDXS = [ 58, 169, 206, 235]
 
 def extract_patches(img, patch_size):
     '''
@@ -45,6 +51,24 @@ def extract_patches(img, patch_size):
             if patch.shape == (patch_size, patch_size):
                 patches.append(patch)
     return patches
+
+def show_patches_grid(patches, cols=16):
+    n_patches = len(patches)
+    rows = (n_patches + cols - 1) // cols
+
+    fig, axes = plt.subplots(rows, cols, figsize=(cols*2, rows*2))
+    axes = axes.flatten()
+
+    for ax, patch in zip(axes, patches):
+        if patch.ndim == 2:
+            ax.imshow(patch, cmap='gray')
+        else:
+            ax.imshow(patch)
+        ax.axis('off')
+
+    plt.tight_layout()
+    plt.show()
+    fig.savefig("patches_16.png")
 
 def compute_patch_results(patch, n, cell_size, blob_size, alpha):
     # true coefs of theta
@@ -132,44 +156,36 @@ def compute_patch_results(patch, n, cell_size, blob_size, alpha):
 
 def get_results(img):
     patches = extract_patches(img, PATCH_SIZE)
-    print(len(patches))
     all_results = []
     for patch in patches:
         res = compute_patch_results(patch, N_OBS, CELL_SIZE, BLOB_SIZE, ALPHA)
         all_results.append(res)
-
     return all_results
 
-def aggregate_patch_results(all_patch_results):
-    aggregated = {
-        "coeffs_true": np.mean([patch["coeffs_true"].flatten() for patch in all_patch_results]),
-        "V1": {},
-        "Pixel": {},
-        "Gaussian": {}
-    }
+def run_selected_patches(patches, patch_idxs):
+    results = {}
 
-    for method in ["V1", "Pixel", "Gaussian"]:
-        aggregated[method]["a_est"] = np.mean([patch[method]["a_est"].flatten() for patch in all_patch_results])
-        aggregated[method]["a_true"] = np.mean([patch[method]["a_true"].flatten() for patch in all_patch_results])
-        aggregated[method]["error"] = np.mean([patch[method]["error"].flatten() for patch in all_patch_results])
-        aggregated[method]["est_coeffs"] = np.mean([patch[method]["est_coeffs"].flatten() for patch in all_patch_results])
-        
-        aggregated[method]["Vh"] = all_patch_results[0][method]["Vh"] # just the first for now
-        # not using these rn + not sure how to do
-        aggregated[method]["U"] = None
-        aggregated[method]["S"] = None
-        aggregated[method]["reconstruction"] = None
+    for idx in patch_idxs:
+        print(f"Running patch {idx}")
+        results[idx] = compute_patch_results(
+            patches[idx],
+            N_OBS,
+            CELL_SIZE,
+            BLOB_SIZE,
+            ALPHA
+        )
 
-    return aggregated
+    return results
 
-boat = process_image("boat.png", False)
-print(boat.shape)
-results = get_results(boat)
+barbara = process_image("barbara.bmp", color=False)
+patches = extract_patches(barbara, PATCH_SIZE)
+#show_patches_grid(patches)
+results = run_selected_patches(patches, PATCH_IDXS)
 
-aggregated_results = aggregate_patch_results(results)
-
-
-def pc_scatter_plots(results, num_obs, filename, cmap='cool'):
+'''
+PC's as scatter plots - together
+'''
+def pc_scatter_plots(results, num_obs, filename, patch_idx, cmap='cool',):
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
@@ -190,29 +206,57 @@ def pc_scatter_plots(results, num_obs, filename, cmap='cool'):
 
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.set_title(f"{method} vs True ({num_obs} obs)")
-        ax.set_xlabel(f"{method} Principal Component")
+        ax.set_title(f"{method} vs True")
+        ax.set_xlabel("Principal Component")
         ax.set_ylabel("True Principal Component")
-
         cbar = plt.colorbar(sc, ax=ax)
         cbar.set_label('PC rank', rotation=270, labelpad=15)
-    
+
+    plt.suptitle(f"True vs Estimated Principal Components - Patch {patch_idx}")
     plt.tight_layout()
     plt.savefig(filename)
     plt.close()
 
-# pc_scatter_plots(results, 100, "PC_scatter_100.svg")
-# pc_scatter_plots(results, 300, "PC_scatter_300.svg")
+def pc_per_method(results, num_obs, patch_idx):
+    
+    methods = ["V1", "Pixel", "Gaussian"]
 
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+
+    for ax, method in zip(axes, methods):
+
+        components = np.abs(results[num_obs][method]["a_est"])
+        ax.scatter(range(len(components)), components, s=10, color='skyblue')
+
+        ax.set_xlabel("Rank")
+        ax.set_ylabel("Principal Component")
+        ax.set_yscale('log')
+        ax.set_title(f"{method} Principal Component")
+
+    plt.suptitle(f"Principal Component - Patch {patch_idx}")
+    plt.tight_layout()
+    plt.savefig(f"pc_per_method_patch_{patch_idx}.svg", dpi=300)
+    plt.close()
+
+
+
+'''
+Plot squared error
+'''
 def plot_smoothed_error(ax, err, label):
     df = pd.DataFrame({"Index": range(len(err)), "Error": err})
-    # rolling mean (window of 150 components) to smooth the curve
+    # rolling mean (window of 15 components) to smooth the curve
     df["Smoothed_Error"] = df["Error"].rolling(15, min_periods=1).mean()
 
     ax.plot(df["Index"], df["Smoothed_Error"], label=label)
 
+def plot_cdf_error(ax, err, label):
+    err = np.array(err)
+    sorted_err = np.sort(err)
+    cdf = np.arange(1, len(sorted_err) + 1) / len(sorted_err)
+    ax.plot(sorted_err, cdf, label=label)
 
-def compare_smoothed_errors(results, num_obs_list, filename):
+def compare_smoothed_errors(results, num_obs_list, filename, patch_idx):
     n_obs = len(num_obs_list)
     fig, axes = plt.subplots(1, n_obs, figsize=(8*n_obs, 6))  # width scales with number of plots
 
@@ -222,26 +266,22 @@ def compare_smoothed_errors(results, num_obs_list, filename):
 
     for ax, num_obs in zip(axes, num_obs_list):
         for method in ["V1", "Pixel", "Gaussian"]:
-            plot_smoothed_error(ax, results[num_obs][method]["error"], method)
+            plot_cdf_error(ax, results[num_obs][method]["error"], method)
 
         ax.set_xscale('log')
-        ax.set_yscale('log')
-        ax.set_title(f"Error per Component ({num_obs} Observations)")
-        ax.set_xlabel("Index")
-        ax.set_ylabel("Squared Error")
+        ax.set_yscale('linear')
+        ax.set_title(f"Error per Component - Patch {patch_idx}")
+        ax.set_xlabel("Squared Error")
+        ax.set_ylabel("CDF")
         ax.legend()
 
     plt.tight_layout()
     plt.savefig(filename)
     plt.close()
 
-
-# compare_smoothed_errors(results, "smoothed_error_log_100_300.svg")
-
 '''
 PCs as pics
 '''
-
 # top of each method
 def plot_first_pc(results, num_obs, cmap="gray", title=None, figsize=(12, 4), fileName=None):
     methods = ["V1", "Pixel", "Gaussian"]
@@ -250,7 +290,7 @@ def plot_first_pc(results, num_obs, cmap="gray", title=None, figsize=(12, 4), fi
     plt.figure(figsize=figsize)
     
     for i, method in enumerate(methods):
-        pc_dct = results[num_obs][method]["Vh"][0, :].reshape(30, 30)
+        pc_dct = results[num_obs][method]["Vh"][0, :].reshape(32, 32)
         pc = fft.idctn(pc_dct, norm = 'ortho', axes = [0, 1])
         ax = plt.subplot(1, n_methods, i+1)
         ax.imshow(pc, cmap=cmap)
@@ -262,15 +302,6 @@ def plot_first_pc(results, num_obs, cmap="gray", title=None, figsize=(12, 4), fi
     plt.savefig(fileName, dpi=300)
     plt.close()
 
-# plot_first_pc(results, num_obs=100,
-#               title="First Principal Component (30 x 30) (100 Obs)",
-#               fileName="pc_first_images_100.png")
-
-# plot_first_pc(results, num_obs=300,
-#               title="First Principal Component (30 x 30) (300 Obs)",
-#               fileName="pc_first_images_300.png")
-
-# top 3 of each method
 def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(12, 8), fileName=None):
     methods = ["V1", "Pixel", "Gaussian"]
     n_methods = len(methods)
@@ -281,7 +312,7 @@ def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(
         Vh = results[num_obs][method]["Vh"]
 
         for col in range(num_pcs):
-            pc_dct = Vh[col, :].reshape(30, 30)
+            pc_dct = Vh[col, :].reshape(PATCH_SIZE, PATCH_SIZE)
             pc = fft.idctn(pc_dct, norm = 'ortho', axes = [0, 1])
 
             ax = plt.subplot(n_methods, num_pcs, row * num_pcs + col + 1)
@@ -300,19 +331,10 @@ def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(
     plt.savefig(fileName, dpi=300)
     plt.close()
 
-# plot_top_pcs(results, num_obs=100, num_pcs=3,
-#                 title="Top 3 Principal Components per Method (30×30) (100 obs)",
-#                 fileName="pc_top3_images_100_labeled.png"
-# )
-# plot_top_pcs(results, num_obs=300, num_pcs=3,
-#                 title="Top 3 Principal Components per Method (30×30) (300 obs)",
-#                 fileName="pc_top3_images_300_labeled.png"
-# )
-
 '''
 Sparcity of coeffs vectors - histogram of entries in coeffs vectors
 '''
-def coeff_vectors_hist(results, num_obs):
+def coeff_vectors_hist(results, num_obs, patch_idx):
     plt.figure(figsize=(16, 4))
 
     # labels and coeffs
@@ -322,8 +344,11 @@ def coeff_vectors_hist(results, num_obs):
         ("Pixel Estimated", results[num_obs]["Pixel"]["est_coeffs"].flatten()),
         ("Gaussian Estimated", results[num_obs]["Gaussian"]["est_coeffs"].flatten()),
     ]
-    max_val = max(np.max(np.abs(coeffs)) for _, coeffs in coeff_vectors)
-    bins = np.linspace(0, max_val, 50)
+    
+    all_abs = np.concatenate([np.abs(c) for _, c in coeff_vectors])
+    upper = np.percentile(all_abs, 99)   # 99th percentile
+    bins = np.linspace(0, upper, 50)
+
 
     for i, (label, coeffs) in enumerate(coeff_vectors):
         ax = plt.subplot(1, 4, i + 1)
@@ -331,12 +356,13 @@ def coeff_vectors_hist(results, num_obs):
         ax.set_xlabel("Absolute Coefficient Value")
         ax.set_ylabel("Number of Coefficients")
         ax.set_title(label)
-        ax.set_ylim(0, 12)
+        #ax.set_ylim(0, 12)
+        ax.set_yscale("log")
         ax.grid(alpha=0.3)
 
-    plt.suptitle(f"Coefficient Histograms ({num_obs} observations)", fontsize=15)
+    plt.suptitle(f"Coefficient Histograms - Patch {patch_idx}", fontsize=15)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.savefig(f"coeff_histograms_{num_obs}.svg", dpi=300)
+    plt.savefig(f"coeff_histograms_{num_obs}_patch_{patch_idx}.svg", dpi=300)
     plt.close()
 
     print(f"\nNumber of coefficients <0.1 and <0.5 ({num_obs} Obs):")
@@ -345,11 +371,8 @@ def coeff_vectors_hist(results, num_obs):
         less_than_05 = np.sum(np.abs(coeffs) < 0.5)
         print(f"{label:15s}  <0.1: {less_than_01:4d},  <0.5: {less_than_05:4d}")
 
-# coeff_vectors_hist(results, 100)
-# coeff_vectors_hist(results, 300)
-
 # cdf of coeffs
-def coeff_vectors_cdf(results, num_obs):
+def coeff_vectors_cdf(results, num_obs, patch_idx):
     plt.figure(figsize=(6, 5))
 
     # labels, coefficient vectors
@@ -365,26 +388,26 @@ def coeff_vectors_cdf(results, num_obs):
         cdf = np.arange(1, len(abs_coeffs) + 1) / len(abs_coeffs)
         plt.plot(abs_coeffs, cdf, label=label)
 
+    plt.xscale("log")
     plt.xlabel("Absolute Coefficient Value")
     plt.ylabel("CDF")
-    plt.title(f"CDF of Coefficients ({num_obs} Observations)")
+    plt.title(f"CDF of Coefficients - Patch {patch_idx}")
     plt.legend()
     plt.grid(alpha=0.3)
 
-    plt.xlim(0, 1)
-    plt.ylim(0, 1)
-
     plt.tight_layout()
-    plt.savefig(f"coeff_cdf_{num_obs}.svg", dpi=300)
+    plt.savefig(f"coeff_cdf_{num_obs}_patch_{patch_idx}.svg", dpi=300)
     plt.close()
 
-# coeff_vectors_cdf(results, 100)
-# coeff_vectors_cdf(results, 300)
+for patch_idx, patch_results in results.items():
+    results = {256: patch_results}
 
-results_256 = {256: aggregated_results}
-
-coeff_vectors_hist(results_256, 256)
-coeff_vectors_cdf(results_256, 256)
-pc_scatter_plots(results_256, 256, "PC_scatter_256.svg")
-compare_smoothed_errors(results_256, [256], "smoothed_error_256.svg")
-
+    # pc_per_method(results, 256, patch_idx)
+    # pc_scatter_plots(results, 256, f"PC_scatter_patch_{patch_idx}.svg", patch_idx)
+    # compare_smoothed_errors(results, [256], f"smoothed_error_cdf_patch_{patch_idx}.svg", patch_idx)
+    # plot_top_pcs(results, num_obs=256, num_pcs=3,
+    #                 title=f"Principal Components per Method  - Patch {patch_idx})",
+    #                 fileName=f"pc_top3_images_256_patch_{patch_idx}.png", 
+    # )
+    coeff_vectors_hist(results, 256, patch_idx)
+    # coeff_vectors_cdf(results, 256, patch_idx)
