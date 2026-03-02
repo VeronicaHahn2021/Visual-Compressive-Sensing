@@ -142,7 +142,7 @@ def pc_scatter_plots(results, num_obs, filename, cmap='cool'):
 def plot_smoothed_error(ax, err, label):
     df = pd.DataFrame({"Index": range(len(err)), "Error": err})
     # rolling mean (window of 150 components) to smooth the curve
-    df["Smoothed_Error"] = df["Error"].rolling(150, min_periods=1).mean()
+    df["Smoothed_Error"] = df["Error"].rolling(15, min_periods=1).mean()
 
     ax.plot(df["Index"], df["Smoothed_Error"], label=label)
 
@@ -165,7 +165,7 @@ def compare_smoothed_errors(results, filename):
     plt.savefig(filename)
     plt.close()
 
-#compare_smoothed_errors(results, "smoothed_error_100_300.svg")
+# compare_smoothed_errors(results, "smoothed_error_log_100_300.svg")
 
 '''
 PCs as pics
@@ -179,7 +179,8 @@ def plot_first_pc(results, num_obs, cmap="gray", title=None, figsize=(12, 4), fi
     plt.figure(figsize=figsize)
     
     for i, method in enumerate(methods):
-        pc = results[num_obs][method]["Vh"][0, :].reshape(30, 30)
+        pc_dct = results[num_obs][method]["Vh"][0, :].reshape(30, 30)
+        pc = fft.idctn(pc_dct, norm = 'ortho', axes = [0, 1])
         ax = plt.subplot(1, n_methods, i+1)
         ax.imshow(pc, cmap=cmap)
         ax.axis("off")
@@ -190,13 +191,13 @@ def plot_first_pc(results, num_obs, cmap="gray", title=None, figsize=(12, 4), fi
     plt.savefig(fileName, dpi=300)
     plt.close()
 
-plot_first_pc(results, num_obs=100,
-              title="First Principal Component (30 x 30) (100 Obs)",
-              fileName="pc_first_images_100.svg")
+# plot_first_pc(results, num_obs=100,
+#               title="First Principal Component (30 x 30) (100 Obs)",
+#               fileName="pc_first_images_100.png")
 
-plot_first_pc(results, num_obs=300,
-              title="First Principal Component (30 x 30) (300 Obs)",
-              fileName="pc_first_images_300.svg")
+# plot_first_pc(results, num_obs=300,
+#               title="First Principal Component (30 x 30) (300 Obs)",
+#               fileName="pc_first_images_300.png")
 
 # top 3 of each method
 def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(12, 8), fileName=None):
@@ -209,7 +210,8 @@ def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(
         Vh = results[num_obs][method]["Vh"]
 
         for col in range(num_pcs):
-            pc = Vh[col, :].reshape(30, 30)
+            pc_dct = Vh[col, :].reshape(30, 30)
+            pc = fft.idctn(pc_dct, norm = 'ortho', axes = [0, 1])
 
             ax = plt.subplot(n_methods, num_pcs, row * num_pcs + col + 1)
             ax.imshow(pc, cmap=cmap)
@@ -222,26 +224,24 @@ def plot_top_pcs(results, num_obs, num_pcs=3, cmap="gray", title=None, figsize=(
             if col == 0:
                 ax.annotate(method, xy=(-0.25, 0.5), xycoords="axes fraction", rotation=90, ha="right", va="center", fontsize=12)
                 
+    plt.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(fileName, dpi=300)
-    plt.suptitle(title, fontsize=16)
     plt.close()
 
 # plot_top_pcs(results, num_obs=100, num_pcs=3,
 #                 title="Top 3 Principal Components per Method (30×30) (100 obs)",
-#                 fileName="pc_top3_images_100_labeled.svg"
+#                 fileName="pc_top3_images_100_labeled.png"
 # )
 # plot_top_pcs(results, num_obs=300, num_pcs=3,
 #                 title="Top 3 Principal Components per Method (30×30) (300 obs)",
-#                 fileName="pc_top3_images_300_labeled.svg"
+#                 fileName="pc_top3_images_300_labeled.png"
 # )
 
 '''
 Sparcity of coeffs vectors - histogram of entries in coeffs vectors
 '''
 def coeff_vectors_hist(results, num_obs):
-    bins = np.linspace(0, 1.0, 50)
-
     plt.figure(figsize=(16, 4))
 
     # labels and coeffs
@@ -251,6 +251,8 @@ def coeff_vectors_hist(results, num_obs):
         ("Pixel Estimated", results[num_obs]["Pixel"]["est_coeffs"].flatten()),
         ("Gaussian Estimated", results[num_obs]["Gaussian"]["est_coeffs"].flatten()),
     ]
+    max_val = max(np.max(np.abs(coeffs)) for _, coeffs in coeff_vectors)
+    bins = np.linspace(0, max_val, 50)
 
     for i, (label, coeffs) in enumerate(coeff_vectors):
         ax = plt.subplot(1, 4, i + 1)
@@ -272,8 +274,8 @@ def coeff_vectors_hist(results, num_obs):
         less_than_05 = np.sum(np.abs(coeffs) < 0.5)
         print(f"{label:15s}  <0.1: {less_than_01:4d},  <0.5: {less_than_05:4d}")
 
-# coeff_vectors_hist(results, 100)
-# coeff_vectors_hist(results, 300)
+coeff_vectors_hist(results, 100)
+coeff_vectors_hist(results, 300)
 
 # cdf of coeffs
 def coeff_vectors_cdf(results, num_obs):

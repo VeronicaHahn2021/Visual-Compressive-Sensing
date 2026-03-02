@@ -9,6 +9,39 @@ sys.path.append('..')
 from src.compress_sensing import *
 from src.utility import *
 from A_experiments.theta_exp_improved import *
+from A_experiments.paper_aligned_plots import *
+
+PATCH_SIZE = 32
+CELL_SIZE = 50
+BLOB_SIZE = 6
+ALPHA = 1
+
+PATCH_IDXS = [ 58, 169, 206, 233]
+NUM_OBS_LIST = [256]
+
+img = process_image("barbara.bmp", color=False)
+patches = extract_patches(img, PATCH_SIZE)
+
+def compute_patch_singular_values(patch, num_cell):
+
+    # V1
+    W_v1, _ = generate_V1_observation(
+        patch, num_cell, CELL_SIZE, BLOB_SIZE, None
+    )
+    theta_v1 = generate_design_matrix(W_v1)
+    _, S_v1, _ = np.linalg.svd(theta_v1, full_matrices=False)
+
+    # Pixel
+    W_pix, _ = generate_pixel_observation(patch, num_cell)
+    theta_pix = generate_design_matrix(W_pix)
+    _, S_pix, _ = np.linalg.svd(theta_pix, full_matrices=False)
+
+    # Gaussian
+    W_gauss, _ = generate_gaussian_observation(patch, num_cell)
+    theta_gauss = generate_design_matrix(W_gauss)
+    _, S_gauss, _ = np.linalg.svd(theta_gauss, full_matrices=False)
+
+    return S_v1, S_pix, S_gauss
 
 
 '''
@@ -38,29 +71,67 @@ def compute_singular_values(num_cell):
 S_V1_100, S_pix_100, S_gauss_100 = compute_singular_values(num_cell_100)
 S_V1_300, S_pix_300, S_gauss_300 = compute_singular_values(num_cell_300)
 
-fig, axes = plt.subplots(1, 2, figsize=(18, 6))  # width x height
 
-# 100 obs
-axes[0].plot(np.arange(1, num_cell_100+1), S_V1_100, "o", label="V1")
-axes[0].plot(np.arange(1, num_cell_100+1), S_pix_100, "x", label="Pix")
-axes[0].plot(np.arange(1, num_cell_100+1), S_gauss_100, "+", label="Gauss")
-axes[0].set_title("SVD (100 Observations)")
-axes[0].set_xlabel("index")
-axes[0].set_ylabel("Singular Value")
-axes[0].legend()
+def plot_SVD(num_plots, patches, savefile):
+    fig, axes = plt.subplots(1, len(PATCH_IDXS), figsize=(18, 6))
+    i = 0
+    for patch_idx in PATCH_IDXS:
+        S_V1_256_, S_pix_256_, S_gauss_256_ = compute_patch_singular_values(patches[patch_idx], 256)
+        axes[i].plot(np.arange(1, num_plots+1), S_V1_256_, "o", label="V1")
+        axes[i].plot(np.arange(1, num_plots+1), S_pix_256_, "x", label="Pix")
+        axes[i].plot(np.arange(1, num_plots+1), S_gauss_256_, "+", label="Gauss")
+        axes[i].set_title(f"Patch {patch_idx}")
+        axes[i].set_xlabel("Index")
+        axes[i].set_ylabel("Singular Value")
+        axes[i].legend()
+        i += 1
+    plt.suptitle(f"SVD", fontsize=16)
+    plt.tight_layout()
+    plt.savefig(savefile)
+    plt.show()
 
-# 300 obs
-axes[1].plot(np.arange(1, num_cell_300+1), S_V1_300, "o", label="V1")
-axes[1].plot(np.arange(1, num_cell_300+1), S_pix_300, "x", label="Pix")
-axes[1].plot(np.arange(1, num_cell_300+1), S_gauss_300, "+", label="Gauss")
-axes[1].set_title("SVD (300 Observations)")
-axes[1].set_xlabel("index")
-axes[1].set_ylabel("Singular Value")
-axes[1].legend()
+'''
+put in 2 rows
+'''
+def plot_SVD(num_plots, patches, savefile):
 
-plt.tight_layout()
-plt.savefig("singular_values_100_vs_300.svg", format="svg")
-plt.show()
+ # TODO: print out the pixel values for this plot to see if the pixel values in the largest step is actually all the same
+ # TODO: for kameron, see if we can plot this as a distribution, same column 
+    n_patches = len(PATCH_IDXS)
+    ncols = int(np.ceil(n_patches / 2))
+    nrows = 2
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(6*ncols, 8), sharey=True)
+    axes = axes.flatten()  # makes indexing easy
+
+    for i, patch_idx in enumerate(PATCH_IDXS):
+
+        S_V1_256_, S_pix_256_, S_gauss_256_ = compute_patch_singular_values(patches[patch_idx], 256)
+
+        axes[i].plot(np.arange(1, num_plots+1), S_V1_256_, "o", label="V1")
+        axes[i].plot(np.arange(1, num_plots+1), S_pix_256_, "x", label="Pix")
+        axes[i].plot(np.arange(1, num_plots+1), S_gauss_256_, "+", label="Gauss")
+
+        axes[i].set_title(f"Patch {patch_idx}")
+        if (i == 2 or i == 3):
+            axes[i].set_xlabel("Index")
+        if (i == 0 or i == 2):
+            axes[i].set_ylabel("Singular Value")
+        if (patch_idx == 169 or patch_idx == 235):
+            axes[i].tick_params(axis='y', which='both', left=False, labelleft=False)
+        axes[i].legend()
+        print(i)
+
+    for j in range(n_patches, len(axes)):
+        fig.delaxes(axes[j])
+
+    plt.suptitle(f"SVD", fontsize=16)
+    plt.tight_layout()
+    plt.savefig(savefile)
+    plt.show()
+
+
+plot_SVD(256, patches, "SVD_256_patches.svg")
 
 '''
 OG code 

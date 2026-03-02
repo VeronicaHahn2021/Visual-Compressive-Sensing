@@ -86,7 +86,7 @@ mean_pixel_error = np.mean(pixel_squared_error)
 # print("Pixel mse:", mean_pixel_error)
 
 
-def make_scatter(est, true, xlabel, title, filename, figsize=(10, 8), dpi=200, marker_size=30, cmap='YlOrRd', alpha=0.5):
+def make_scatter(est, true, xlabel, title, filename, figsize=(8, 8), dpi=200, marker_size=30, cmap='cool', alpha=0.5):
     plt.figure(figsize=figsize, dpi=dpi)
     sc = plt.scatter(np.abs(est), np.abs(true), 
                      c=np.arange(len(est)), s=marker_size,
@@ -108,13 +108,63 @@ def make_scatter(est, true, xlabel, title, filename, figsize=(10, 8), dpi=200, m
     high = min(xmax, ymax) # end at smallest of 2 maxima -> doesn't go beyond
     plt.plot([low, high], [low, high])
     
-    #plt.savefig(filename)
-    #plt.close()
+    plt.savefig(filename)
+    plt.close()
 
 
-#make_scatter(a_est_V1,   a_true_V1, "V1", "V1 vs True (300 samples)", "V1_vs_True_300_YlOrRd.png", alpha=0.5)
-#make_scatter(a_est_pix,  a_true_pix, "Pixel", "Pixel vs True (300 samples)", "Pixel_vs_True_300_YlOrRd.png")
-#make_scatter(a_est_gauss, a_true_gauss, "Gaussian", "Gaussian vs True (300 samples)", "Gaussian_vs_True_300_YlOrRd.png")
+make_scatter(a_est_V1,   a_true_V1, "V1", "V1 vs True (300 samples)", "V1_vs_True_300_YlOrRd.png", alpha=0.5)
+make_scatter(a_est_pix,  a_true_pix, "Pixel", "Pixel vs True (300 samples)", "Pixel_vs_True_300_YlOrRd.png")
+make_scatter(a_est_gauss, a_true_gauss, "Gaussian", "Gaussian vs True (300 samples)", "Gaussian_vs_True_300_YlOrRd.png")
+
+def make_combined_scatter(est_list, true_list, labels, titles, filename, figsize=(18, 6), dpi=200, marker_size=30, cmap='cool', alpha=0.5):
+    """
+    est_list: list of estimated arrays [a_est_V1, a_est_pix, a_est_gauss]
+    true_list: list of true arrays [a_true_V1, a_true_pix, a_true_gauss]
+    labels: list of x-axis labels ["V1", "Pixel", "Gaussian"]
+    titles: list of subplot titles
+    """
+    n = len(est_list)
+    fig, axes = plt.subplots(1, n, figsize=figsize, dpi=dpi)
+
+    for i in range(n):
+        est = est_list[i]
+        true = true_list[i]
+        ax = axes[i]
+
+        sc = ax.scatter(np.abs(est), np.abs(true), 
+                        c=np.arange(len(est)), s=marker_size,
+                        cmap=cmap, alpha=alpha)
+        
+        # Colorbar
+        cbar = plt.colorbar(sc, ax=ax)
+        cbar.set_label('PC rank', rotation=270, labelpad=15)
+
+        ax.set_xlabel(f"{labels[i]} Principal Component")
+        ax.set_ylabel("True Principal Component")
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.set_title(titles[i])
+
+        # y=x line
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+        low = max(xmin, ymin)
+        high = min(xmax, ymax)
+        ax.plot([low, high], [low, high], color='gray', linestyle='--')
+
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()
+
+# Call the function
+make_combined_scatter(
+    est_list=[a_est_V1, a_est_pix, a_est_gauss],
+    true_list=[a_true_V1, a_true_pix, a_true_gauss],
+    labels=["V1", "Pixel", "Gaussian"],
+    titles=["V1 vs True (300 samples)", "Pixel vs True (300 samples)", "Gaussian vs True (300 samples)"],
+    filename="Combined_scatter_300.svg",
+    alpha=0.5
+)
 
 def scatter_PCs(components, xlabel, title):
     plt.figure(figsize=(10,8), dpi=200)
@@ -189,7 +239,25 @@ plt.title("Error Per Component (300 Obs)")
 plt.xlabel("Index")
 plt.ylabel("Squared Error")
 
-#plt.savefig("smoothed_error_plot_300.png", dpi=300, bbox_inches='tight')
+plt.savefig("smoothed_error_plot_300.svg", bbox_inches='tight')
+
+import matplotlib.image as mpimg
+img1 = mpimg.imread("smoothed_error_plot_300.png")
+img2 = mpimg.imread("smoothed_error_plot_300.png")
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))  # adjust size as needed
+
+# Show first image
+axes[0].imshow(img1)
+axes[0].axis('off')  # hide axes
+
+# Show second image
+axes[1].imshow(img2)
+axes[1].axis('off')
+
+plt.tight_layout()
+plt.savefig("combined_smoothed_error.svg", dpi=200)
+plt.show()
 
 
 # '''
@@ -220,24 +288,6 @@ plt.close()
 PCs as pics
 
 '''
-
-# pcs = {
-#     "V1": a_est_V1,
-#     "Pixel": a_est_pix,
-#     "Gaussian": a_est_gauss
-# }
-# plt.figure(figsize=(12,4))
-
-# for i, (label, img_flat) in enumerate(pcs.items()):
-#     plt.subplot(1, 3, i+1)
-#     plt.imshow(img_flat.reshape(30,30), cmap='gray')
-#     plt.title(f'{label} Principal Component')
-#     plt.axis('off')
-
-# plt.suptitle("Principal Components (30 x 30) (300 Obs)", fontsize=15)
-# plt.tight_layout()
-# #plt.savefig("pc_images_300.png")
-# plt.close()
 pcs = {
     "V1": Vh_V1[0, :],
     "Pixel": Vh_pix[0, :],
@@ -291,7 +341,6 @@ plt.close()
 
 '''
 Sparcity of coeffs vectors - histogram of entries in coeffs vectors
-
 '''
 
 coeff_vectors = {
@@ -347,3 +396,66 @@ plt.ylim(0, 1)
 plt.tight_layout()
 #plt.savefig("coeff_cdf_zoom_300.png", dpi=300)
 plt.close()
+
+
+def plot_smoothed_error(a_true_V1, a_est_V1, 
+                        a_true_pix, a_est_pix, 
+                        a_true_gauss, a_est_gauss,
+                        title="Error Per Component", filename="smoothed_error.svg"):
+
+    # compute squared errors
+    err_v1 = (a_true_V1 - a_est_V1) ** 2
+    err_pix = (a_true_pix - a_est_pix) ** 2
+    err_gauss = (a_true_gauss - a_est_gauss) ** 2
+
+    # wide dataframe
+    wide_df = pd.DataFrame({
+        'Index': range(len(err_v1)),
+        'V1': err_v1,
+        'Pixel': err_pix,
+        'Gaussian': err_gauss
+    })
+
+    # long format + rolling mean
+    df_long = wide_df.melt(id_vars='Index', var_name='Method', value_name='Squared Error')
+    df_long['Smoothed Error'] = df_long.groupby('Method')['Squared Error'].transform(
+        lambda x: x.rolling(window=150, min_periods=1).mean()
+    )
+
+    # plot
+    plt.figure(figsize=(10, 8))
+    sns.lineplot(data=df_long, x='Index', y='Smoothed Error', hue='Method')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel("Index")
+    plt.ylabel("Squared Error")
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(filename, bbox_inches='tight')
+    plt.close()
+
+def compare_errors_100_300(data_100, data_300, filename="combined_errors.svg"):
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+    # Unpack data tuples
+    a_true_V1_100, a_est_V1_100, a_true_pix_100, a_est_pix_100, a_true_gauss_100, a_est_gauss_100 = data_100
+    a_true_V1_300, a_est_V1_300, a_true_pix_300, a_est_pix_300, a_true_gauss_300, a_est_gauss_300 = data_300
+
+    # Plot 100 obs
+    plt.sca(axes[0])
+    plot_smoothed_error(a_true_V1_100, a_est_V1_100,
+                        a_true_pix_100, a_est_pix_100,
+                        a_true_gauss_100, a_est_gauss_100,
+                        title="Error (100 Obs)", filename=None)  # filename=None prevents saving inside function
+
+    # Plot 300 obs
+    plt.sca(axes[1])
+    plot_smoothed_error(a_true_V1_300, a_est_V1_300,
+                        a_true_pix_300, a_est_pix_300,
+                        a_true_gauss_300, a_est_gauss_300,
+                        title="Error (300 Obs)", filename=None)
+
+    plt.tight_layout()
+    plt.savefig(filename, bbox_inches='tight')
+    plt.close()
