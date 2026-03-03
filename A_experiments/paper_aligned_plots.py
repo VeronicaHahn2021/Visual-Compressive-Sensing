@@ -34,7 +34,7 @@ BLOB_SIZE = 6
 206 = stain 1
 235 = stain 2
 '''
-PATCH_IDXS = [ 58, 169, 206, 233]
+PATCH_IDXS = [ 58]
 
 def extract_patches(img, patch_size):
     '''
@@ -208,7 +208,7 @@ def pc_scatter_plots(results, num_obs, filename, patch_idx, cmap='cool',):
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_title(f"{method} vs True")
-        ax.set_xlabel("Principal Component")
+        ax.set_xlabel("Estimated Principal Component")
         ax.set_ylabel("True Principal Component")
         cbar = plt.colorbar(sc, ax=ax)
         cbar.set_label('PC rank', rotation=270, labelpad=15)
@@ -232,6 +232,7 @@ def pc_per_method(results, num_obs, patch_idx):
         ax.set_xlabel("Rank")
         ax.set_ylabel("Principal Component")
         ax.set_yscale('log')
+        ax.set_xscale('log')
         ax.set_title(f"{method} Principal Component")
 
     plt.suptitle(f"Principal Component - Patch {patch_idx}")
@@ -282,11 +283,11 @@ def compare_smoothed_errors(results, num_obs_list, filename, patch_idx):
         for method in ["V1", "Pixel", "Gaussian"]:
             cumsum_err(ax, results[num_obs][method]["error"], method)
 
-        ax.set_xscale('log')
+        ax.set_xscale('linear')
         ax.set_yscale('linear')
         ax.set_title(f"Error per Component - Patch {patch_idx}")
-        ax.set_xlabel("Squared Error")
-        ax.set_ylabel("CDF")
+        ax.set_xlabel("Index")
+        ax.set_ylabel("Cumulative Squared Error")
         ax.legend()
 
     plt.tight_layout()
@@ -353,10 +354,10 @@ def coeff_vectors_hist(results, num_obs, patch_idx):
 
     # labels and coeffs
     coeff_vectors = [
-        ("True", results[num_obs]["coeffs_true"].flatten()),
         ("V1 Estimated", results[num_obs]["V1"]["est_coeffs"].flatten()),
         ("Pixel Estimated", results[num_obs]["Pixel"]["est_coeffs"].flatten()),
         ("Gaussian Estimated", results[num_obs]["Gaussian"]["est_coeffs"].flatten()),
+        ("True", results[num_obs]["coeffs_true"].flatten()),
     ]
     
     all_abs = np.concatenate([np.abs(c) for _, c in coeff_vectors])
@@ -367,7 +368,7 @@ def coeff_vectors_hist(results, num_obs, patch_idx):
     for i, (label, coeffs) in enumerate(coeff_vectors):
         ax = plt.subplot(1, 4, i + 1)
         ax.hist(np.abs(coeffs), bins=bins, edgecolor="black", color='C'+str(i))
-        ax.set_xlabel("Absolute Coefficient Value")
+        ax.set_xlabel("Coefficient Magnitude")
         ax.set_ylabel("Number of Coefficients")
         ax.set_title(label)
         #ax.set_ylim(0, 12)
@@ -413,16 +414,16 @@ def coeff_vectors_cdf(results, num_obs, patch_idx):
     plt.savefig(f"coeff_cdf_{num_obs}_patch_{patch_idx}.svg", dpi=300)
     plt.close()
 
-# for patch_idx, patch_results in results.items():
-    # results = {256: patch_results}
-    # pc_per_method(results, 256, patch_idx)
+for patch_idx, patch_results in results.items():
+    results = {256: patch_results}
+    pc_per_method(results, 256, patch_idx)
     # pc_scatter_plots(results, 256, f"PC_scatter_patch_{patch_idx}.svg", patch_idx)
     # compare_smoothed_errors(results, [256], f"smoothed_error_cdf_patch_{patch_idx}.svg", patch_idx)
     # plot_top_pcs(results, num_obs=256, num_pcs=3,
     #                 title=f"Principal Components per Method  - Patch {patch_idx}",
     #                 fileName=f"pc_top3_images_256_patch_{patch_idx}.png", 
     # )
-    #coeff_vectors_hist(results, 256, patch_idx)
+    # coeff_vectors_hist(results, 256, patch_idx)
     # coeff_vectors_cdf(results, 256, patch_idx)
 
 def pc_scatter_plots_all_patches(results, patch_idxs, filename, cmap='cool'):
@@ -513,10 +514,10 @@ def pc_per_method_all_patches(results, patch_idxs, filename):
         for col, method in enumerate(methods):
             ax = axes[row, col]
 
-            components = np.cumsum(np.abs(results[patch_idx][method]["a_est"]))
+            components = np.cumsum((results[patch_idx][method]["a_est"]))
             # ranks = np.arange(1, len(components) + 1)
             # ax.scatter(ranks, components, s=10, color='skyblue')
-            ax.scatter(range(len(components)), components, s=10, color='skyblue')
+            ax.plot(range(len(components)), components, s=10, color='skyblue')
 
             ax.set_yscale('log')
             #ax.set_xscale('log')
@@ -627,7 +628,7 @@ def coeff_vectors_hist_all_patches(results, patch_idxs, filename):
             if col == 0:
                 ax.set_ylabel(f"Patch {patch_idx}\n\nCount", fontsize=12)
             if row == n_rows - 1:
-                ax.set_xlabel("Abs Coefficient Value", fontsize=12)
+                ax.set_xlabel("Coefficient Magnitude", fontsize=12)
             if col != 0: 
                 ax.tick_params(axis='y', which='both', left=False, labelleft=False)
 
@@ -683,7 +684,7 @@ def coeff_vectors_cdf_all_patches(results, patch_idxs, filename):
 
 
 # pc_scatter_plots_all_patches(results,PATCH_IDXS,"all_patches_pc_scatter.svg")
-pc_per_method_all_patches(results, PATCH_IDXS,"all_patches_pc_per_method.svg")
+# pc_per_method_all_patches(results, PATCH_IDXS,"all_patches_pc_per_method_cumsum.svg")
 #error_all_patches(results, PATCH_IDXS, "all_patches_error_cumsum.svg")
 # coeff_vectors_hist_all_patches(results, PATCH_IDXS, "all_patches_coeffs_hist_full_y.svg" )
 # coeff_vectors_cdf_all_patches(results, PATCH_IDXS, "all_patches_coeffs_cdf_lim.svg")

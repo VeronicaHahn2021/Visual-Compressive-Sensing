@@ -131,7 +131,31 @@ def plot_SVD(num_plots, patches, savefile):
     plt.show()
 
 
-plot_SVD(256, patches, "SVD_256_patches.svg")
+#plot_SVD(256, patches, "SVD_256_patches.svg")
+
+def plot_SVD_single_patch(num_plots, patches, savefile):
+
+    patch_idx = 58  # explicitly choose patch 58
+
+    S_V1_256_, S_pix_256_, S_gauss_256_ = \
+        compute_patch_singular_values(patches[patch_idx], 256)
+
+    plt.figure(figsize=(8, 6))
+
+    plt.plot(np.arange(1, num_plots+1), S_V1_256_, "o", label="V1")
+    plt.plot(np.arange(1, num_plots+1), S_pix_256_, "x", label="Pix")
+    plt.plot(np.arange(1, num_plots+1), S_gauss_256_, "+", label="Gauss")
+
+    plt.title(f"SVD - Patch {patch_idx}")
+    plt.xlabel("Index")
+    plt.ylabel("Singular Value")
+    plt.legend()
+
+    plt.tight_layout()
+    plt.savefig(savefile)
+    plt.show()
+
+plot_SVD_single_patch(256, patches, "SVD_patch_58.svg")
 
 '''
 OG code 

@@ -704,10 +704,14 @@ def MC_box_plot_all_patches(patches, patch_idxs, filename="MC_all_patches.svg"):
     plt.savefig(filename, format="svg", dpi=300)
     plt.close()
 
+# dot_product_histograms_all_patches(patches, PATCH_IDXS, 256)
+# plot_dot_products_all_patches(patches, PATCH_IDXS, 256 )
+# MC_box_plot_all_patches(patches, PATCH_IDXS)
 
-dot_product_histograms_all_patches(patches, PATCH_IDXS, 256)
-plot_dot_products_all_patches(patches, PATCH_IDXS, 256 )
-MC_box_plot_all_patches(patches, PATCH_IDXS)
+# dot_product_histogram_for_patch(58, bins=50)
+# plot_dot_products_for_patch(58)
+# MC_box_plot_for_patch(58)
+
 # for pidx in PATCH_IDXS:
 #     MC_box_plot_for_patch(pidx)
 #     plot_dot_products_for_patch(pidx)
