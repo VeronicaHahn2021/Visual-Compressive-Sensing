@@ -556,7 +556,7 @@ def plot_dot_products_for_patch(patch_idx):
 def dot_product_histogram_for_patch(patch_idx, bins=50):
     patch = patches[patch_idx]
     cmap = cm.get_cmap("tab10", 3)
-    colors = [cmap(i) for i in range(3)]
+    colors = ["#2196F3", "#FF6F00", "#43A047"]  # blue, amber, green
 
     obs_types = ["V1", "pixel", "gaussian"]
     labels = ["V1", "Pixel", "Gaussian"]
@@ -565,7 +565,13 @@ def dot_product_histogram_for_patch(patch_idx, bins=50):
 
     for obs, label, color in zip(obs_types, labels, colors):
         dot = dot_product_matrix_from_patch(patch, obs, NUM_CELL)
-        plt.hist(dot.flatten(), bins, cumulative=False, density=True, label=label, color=color)
+        #plt.hist(dot.flatten(), bins, cumulative=False, density=True, label=label, color=color)
+        plt.hist(dot.flatten(), bins, density=True,
+                    alpha=0.5,           # lower fill opacity so overlaps show through
+                    color=color,
+                    edgecolor=color,
+                    linewidth=1.2,       # crisp outline at full opacity
+                    label=label)
 
     plt.xlabel("Dot Product")
     plt.ylabel("Density")
@@ -579,10 +585,10 @@ def dot_product_histogram_for_patch(patch_idx, bins=50):
 def dot_product_histograms_all_patches(patches, patch_idxs, num_cell, bins=50, filename="DotProductHist_all_patches.svg"):
     obs_types = ["V1", "pixel", "gaussian"]
     labels = ["V1", "Pixel", "Gaussian"]
-    cmap = cm.get_cmap("tab10", len(obs_types)) # TODO: pick 3 colors that look better when overlaid (default color - orange, green, blue)
-    colors = [cmap(i) for i in range(len(obs_types))]
 
-    # 2x2 grid for 4 patches
+    # Perceptually distinct, colorblind-friendly colors with good overlap visibility
+    colors = ["#2196F3", "#FF6F00", "#43A047"]  # blue, amber, green
+
     n_patches = len(patch_idxs)
     n_cols = 2
     n_rows = (n_patches + 1) // n_cols
@@ -595,9 +601,13 @@ def dot_product_histograms_all_patches(patches, patch_idxs, num_cell, bins=50, f
         patch = patches[patch_idx]
         for obs, label, color in zip(obs_types, labels, colors):
             dot = dot_product_matrix_from_patch(patch, obs, num_cell)
-            ax.hist(dot.flatten(), bins, density=True, alpha=0.7, label=label, color=color)
+            ax.hist(dot.flatten(), bins, density=True,
+                    alpha=0.5,           # lower fill opacity so overlaps show through
+                    color=color,
+                    edgecolor=color,
+                    linewidth=1.2,       # crisp outline at full opacity
+                    label=label)
 
-        # only set xlabel for bottom row
         row = i // n_cols
         col = i % n_cols
         if row == n_rows - 1:
@@ -611,7 +621,6 @@ def dot_product_histograms_all_patches(patches, patch_idxs, num_cell, bins=50, f
         ax.legend(fontsize=10)
         ax.grid(alpha=0.3)
 
-    # remove extra axes
     for ax in axes[n_patches:]:
         fig.delaxes(ax)
 
@@ -666,7 +675,7 @@ def MC_box_plot_all_patches(patches, patch_idxs, filename="MC_all_patches.svg"):
     n_cols = 2
     n_rows = (n_patches + 1) // n_cols  # 2 rows for 4 patches
 
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 5*n_rows), sharey=True)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 8), sharey=True)
 
     # make axes 2D even if n_rows or n_cols = 1
     if n_rows == 1:
@@ -704,7 +713,7 @@ def MC_box_plot_all_patches(patches, patch_idxs, filename="MC_all_patches.svg"):
     plt.savefig(filename, format="svg", dpi=300)
     plt.close()
 
-# dot_product_histograms_all_patches(patches, PATCH_IDXS, 256)
+#dot_product_histograms_all_patches(patches, PATCH_IDXS, 256)
 # plot_dot_products_all_patches(patches, PATCH_IDXS, 256 )
 # MC_box_plot_all_patches(patches, PATCH_IDXS)
 
@@ -712,6 +721,7 @@ def MC_box_plot_all_patches(patches, patch_idxs, filename="MC_all_patches.svg"):
 # plot_dot_products_for_patch(58)
 # MC_box_plot_for_patch(58)
 
+dot_product_histogram_for_patch(58, bins=50)
 # for pidx in PATCH_IDXS:
 #     MC_box_plot_for_patch(pidx)
 #     plot_dot_products_for_patch(pidx)

@@ -34,7 +34,7 @@ BLOB_SIZE = 6
 206 = stain 1
 235 = stain 2
 '''
-PATCH_IDXS = [ 58]
+PATCH_IDXS = [58, 169, 206, 233]
 
 def extract_patches(img, patch_size):
     '''
@@ -59,17 +59,24 @@ def show_patches_grid(patches, cols=16):
     fig, axes = plt.subplots(rows, cols, figsize=(cols*2, rows*2))
     axes = axes.flatten()
 
+    # global min and max across all patches for colorbar
+    gray_patches = [p for p in patches if p.ndim == 2]
+    vmin = min(p.min() for p in gray_patches) if gray_patches else 0
+    vmax = max(p.max() for p in gray_patches) if gray_patches else 1
+
     for ax, patch in zip(axes, patches):
         if patch.ndim == 2:
-            # TODO: set color bar to be the same on all patches to get rid of weird gray scale
-            ax.imshow(patch, cmap='gray')
+            ax.imshow(patch, cmap='gray', vmin=vmin, vmax=vmax)
         else:
             ax.imshow(patch)
         ax.axis('off')
 
+    for ax in axes[len(patches):]:
+        ax.axis('off')
+
     plt.tight_layout()
+    fig.savefig("patches.svg")
     plt.show()
-    fig.savefig("patches_16.png")
 
 def compute_patch_results(patch, n, cell_size, blob_size, alpha):
     # true coefs of theta
@@ -180,7 +187,7 @@ def run_selected_patches(patches, patch_idxs):
 
 barbara = process_image("barbara.bmp", color=False)
 patches = extract_patches(barbara, PATCH_SIZE)
-#show_patches_grid(patches)
+# show_patches_grid(patches)
 results = run_selected_patches(patches, PATCH_IDXS)
 
 '''
@@ -226,14 +233,14 @@ def pc_per_method(results, num_obs, patch_idx):
 
     for ax, method in zip(axes, methods):
 
-        components = np.abs(results[num_obs][method]["a_est"])
+        components = np.abs(results[num_obs][method]["a_true"])
         ax.scatter(range(len(components)), components, s=10, color='skyblue')
 
         ax.set_xlabel("Rank")
-        ax.set_ylabel("Principal Component")
+        ax.set_ylabel("True Principal Component")
         ax.set_yscale('log')
-        ax.set_xscale('log')
-        ax.set_title(f"{method} Principal Component")
+        #ax.set_xscale('log')
+        ax.set_title(f"{method} True Principal Component")
 
     plt.suptitle(f"Principal Component - Patch {patch_idx}")
     plt.tight_layout()
@@ -254,7 +261,7 @@ def plot_smoothed_error(ax, err, label):
 
 def plot_cdf_error(ax, err, label):
     err = np.array(err)
-    sorted_err = np.sort(err) # TODO: instead of sort - do the cumulative sum of the error
+    sorted_err = np.sort(err)
     cdf = np.arange(1, len(sorted_err) + 1) / len(sorted_err)
     ax.plot(sorted_err, cdf, label=label)
 
@@ -281,13 +288,13 @@ def compare_smoothed_errors(results, num_obs_list, filename, patch_idx):
 
     for ax, num_obs in zip(axes, num_obs_list):
         for method in ["V1", "Pixel", "Gaussian"]:
-            cumsum_err(ax, results[num_obs][method]["error"], method)
+            plot_smoothed_error(ax, results[num_obs][method]["error"], method)
 
-        ax.set_xscale('linear')
-        ax.set_yscale('linear')
+        ax.set_xscale('log')
+        ax.set_yscale('log')
         ax.set_title(f"Error per Component - Patch {patch_idx}")
         ax.set_xlabel("Index")
-        ax.set_ylabel("Cumulative Squared Error")
+        ax.set_ylabel("Squared Error")
         ax.legend()
 
     plt.tight_layout()
@@ -305,12 +312,14 @@ def plot_first_pc(results, num_obs, cmap="gray", title=None, figsize=(12, 4), fi
     plt.figure(figsize=figsize)
     
     for i, method in enumerate(methods):
-        pc_dct = results[num_obs][method]["Vh"][0, :].reshape(32, 32)
+        pc_array = results[num_obs][method]["Vh"]
+        len(pc_array)
+        pc_dct = results[num_obs][method]["Vh"][1023].reshape(32, 32)
         pc = fft.idctn(pc_dct, norm = 'ortho', axes = [0, 1])
         ax = plt.subplot(1, n_methods, i+1)
         ax.imshow(pc, cmap=cmap)
         ax.axis("off")
-        ax.set_title(f'{method} First PC', fontsize=12)
+        ax.set_title(f'{method} Last PC', fontsize=12)
 
     plt.suptitle(title, fontsize=16)
     plt.tight_layout()
@@ -414,15 +423,15 @@ def coeff_vectors_cdf(results, num_obs, patch_idx):
     plt.savefig(f"coeff_cdf_{num_obs}_patch_{patch_idx}.svg", dpi=300)
     plt.close()
 
-for patch_idx, patch_results in results.items():
-    results = {256: patch_results}
-    pc_per_method(results, 256, patch_idx)
-    # pc_scatter_plots(results, 256, f"PC_scatter_patch_{patch_idx}.svg", patch_idx)
-    # compare_smoothed_errors(results, [256], f"smoothed_error_cdf_patch_{patch_idx}.svg", patch_idx)
-    # plot_top_pcs(results, num_obs=256, num_pcs=3,
-    #                 title=f"Principal Components per Method  - Patch {patch_idx}",
-    #                 fileName=f"pc_top3_images_256_patch_{patch_idx}.png", 
-    # )
+# for patch_idx, patch_results in results.items():
+#     results = {256: patch_results}
+#     pc_per_method(results, 256, patch_idx)
+#     # pc_scatter_plots(results, 256, f"PC_scatter_patch_{patch_idx}.svg", patch_idx)
+#     # compare_smoothed_errors(results, [256], f"smoothed_error_cdf_patch_{patch_idx}.svg", patch_idx)
+#     plot_first_pc(results, num_obs=256,
+#                     title=f"Principal Components per Method  - Patch {patch_idx}",
+#                     fileName=f"pc_top3_images_256_patch_{patch_idx}.png", 
+#     )
     # coeff_vectors_hist(results, 256, patch_idx)
     # coeff_vectors_cdf(results, 256, patch_idx)
 
@@ -431,74 +440,64 @@ def pc_scatter_plots_all_patches(results, patch_idxs, filename, cmap='cool'):
     n_rows = len(patch_idxs)
     methods = ["V1", "Pixel", "Gaussian"]
 
-    fig, axes = plt.subplots(n_rows, 3, figsize=(18, 6 * n_rows), sharey=True)
+    fig, axes = plt.subplots(
+        n_rows, 3,
+        figsize=(15, 5 * n_rows),
+        sharey=True,
+        layout="constrained"
+    )
 
     if n_rows == 1:
         axes = np.expand_dims(axes, axis=0)
 
-    # get the global max and min for y=x line
     global_min = np.inf
     global_max = -np.inf
-
     for patch_idx in patch_idxs:
         for method in methods:
             est = np.abs(results[patch_idx][method]["a_est"])
             true = np.abs(results[patch_idx][method]["a_true"])
-
             combined = np.concatenate([est, true])
             combined = combined[combined > 0]
-
             global_min = min(global_min, combined.min())
             global_max = max(global_max, combined.max())
 
     for row, patch_idx in enumerate(patch_idxs):
-
+        sc = None
         for col, method in enumerate(methods):
-
             ax = axes[row, col]
 
             est = results[patch_idx][method]["a_est"]
             true = results[patch_idx][method]["a_true"]
 
             sc = ax.scatter(
-                np.abs(est),
-                np.abs(true),
+                np.abs(est), np.abs(true),
                 c=np.arange(len(est)),
-                s=30,
-                cmap=cmap,
-                alpha=0.5
+                s=30, cmap=cmap, alpha=0.5
             )
 
             ax.set_xscale('log')
             ax.set_yscale('log')
-
             ax.set_xlim(global_min, global_max)
             ax.set_ylim(global_min, global_max)
-
             ax.plot([global_min, global_max], [global_min, global_max], '--', color='gray')
-
             ax.set_aspect('equal', adjustable='box')
 
             if row == 0:
                 ax.set_title(method, fontsize=18)
             if col == 0:
                 ax.set_ylabel(f"Patch {patch_idx}\n\nTrue PC", fontsize=18)
-            if row == n_rows - 1: 
+            if row == n_rows - 1:
                 ax.set_xlabel("Estimated PC", fontsize=18)
             if col != 0:
                 ax.yaxis.set_visible(False)
-            if col == 2:
-                from mpl_toolkits.axes_grid1 import make_axes_locatable
-                divider = make_axes_locatable(ax)
-                cax = divider.append_axes("right", size="5%", pad=0.01)
-                cbar = plt.colorbar(sc, cax=cax)
-                cbar.set_label("PC rank", rotation=270, labelpad=15)
 
-    fig.suptitle("True vs Estimated Principal Components", fontsize=20, x=0.53)
-    plt.tight_layout(rect=[0, 0, 0.92, 0.97])
+        # Add colorbar directly attached to the rightmost ax in this row
+        fig.colorbar(sc, ax=axes[row, 2], shrink=0.8, label="PC rank")
+
+    fig.suptitle("True vs Estimated Principal Components", fontsize=20)
     plt.savefig(filename, format="svg")
     plt.close()
-
+    
 def pc_per_method_all_patches(results, patch_idxs, filename):
 
     n_rows = len(patch_idxs)
@@ -514,18 +513,20 @@ def pc_per_method_all_patches(results, patch_idxs, filename):
         for col, method in enumerate(methods):
             ax = axes[row, col]
 
-            components = np.cumsum((results[patch_idx][method]["a_est"]))
-            # ranks = np.arange(1, len(components) + 1)
-            # ax.scatter(ranks, components, s=10, color='skyblue')
-            ax.plot(range(len(components)), components, s=10, color='skyblue')
+            components = np.abs(results[patch_idx][method]["a_est"])
+            ranks = np.arange(1, len(components) + 1)
+            # cumsum_components = np.cumsum(components)
+            # print(cumsum_components)
+            # ax.plot(ranks, cumsum_components, color='skyblue')
+
+            ax.scatter(ranks, components, s=10, color='skyblue')
 
             ax.set_yscale('log')
             #ax.set_xscale('log')
             if row == 0:
                 ax.set_title(method, fontsize=18)
             if col == 0:
-                # TODO: change label to be images something PC
-                ax.set_ylabel(f"Patch {patch_idx}\n\n PC", fontsize=18)
+                ax.set_ylabel(f"Patch {patch_idx}\n\n Estimated Principal Components", fontsize=18)
             if row == n_rows - 1: 
                 ax.set_xlabel("Rank", fontsize=18)
             if col != 0:
@@ -594,32 +595,28 @@ def error_all_patches(results, patch_idxs, filename):
     plt.close()
 
 def coeff_vectors_hist_all_patches(results, patch_idxs, filename):
-
-    # TODO: swap order so true is last so that the color order is right
     n_rows = len(patch_idxs)
     n_cols = 4 
 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(4*n_cols, 4*n_rows), sharey=True)
     
-    # flatten axes if 1 row
     if n_rows == 1:
         axes = np.expand_dims(axes, axis=0)
 
     for row, patch_idx in enumerate(patch_idxs):
         coeff_vectors = [
-            ("True", results[patch_idx]["coeffs_true"].flatten()),
             ("V1 Estimated", results[patch_idx]["V1"]["est_coeffs"].flatten()),
             ("Pixel Estimated", results[patch_idx]["Pixel"]["est_coeffs"].flatten()),
             ("Gaussian Estimated", results[patch_idx]["Gaussian"]["est_coeffs"].flatten()),
+            ("True", results[patch_idx]["coeffs_true"].flatten()),
         ]
         all_abs = np.concatenate([np.abs(c) for _, c in coeff_vectors])
-        upper = np.percentile(all_abs, 99)   # 99th percentile
+        upper = np.percentile(all_abs, 99)
         bins = np.linspace(0, upper, 50)
 
         for col, (label, coeffs) in enumerate(coeff_vectors):
             ax = axes[row, col]
             ax.hist(np.abs(coeffs), bins=bins, edgecolor="black", color=f"C{col}")
-            #ax.set_ylim(0, 12)
             ax.set_yscale("log")
             ax.grid(True, which='major', linestyle='--', alpha=0.4)
 
@@ -627,13 +624,12 @@ def coeff_vectors_hist_all_patches(results, patch_idxs, filename):
                 ax.set_title(label, fontsize=12)
             if col == 0:
                 ax.set_ylabel(f"Patch {patch_idx}\n\nCount", fontsize=12)
-            if row == n_rows - 1:
-                ax.set_xlabel("Coefficient Magnitude", fontsize=12)
             if col != 0: 
                 ax.tick_params(axis='y', which='both', left=False, labelleft=False)
 
-    plt.suptitle(f"Frequency of Coefficients", fontsize=16)
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.text(0.5, 0.01, "Coefficient Magnitude", ha="center", fontsize=12)
+    plt.suptitle("Frequency of Coefficients", fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.savefig(filename, format="svg", dpi=300)
     plt.close()
 
@@ -682,9 +678,30 @@ def coeff_vectors_cdf_all_patches(results, patch_idxs, filename):
     plt.savefig(filename, format="svg")
     plt.close()
 
+def plot_true_components_all_patches():
+    plt.figure(figsize=(7,5))
 
+    for pidx in PATCH_IDXS:
+        patch = patches[pidx]
+        p = fft.dctn(patch, norm='ortho').flatten()
+        p_sorted = np.sort(np.abs(p))[::-1]
+
+        plt.plot(p_sorted, label=f"Patch {pidx}")
+
+    plt.yscale("log")
+    plt.xlabel("Component Rank")
+    plt.ylabel("|p|")
+    plt.title("True Image Components")
+    plt.legend()
+    plt.grid(alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig("TrueComponents_all_patches.svg")
+    plt.show()
+
+#plot_true_components_all_patches()
 # pc_scatter_plots_all_patches(results,PATCH_IDXS,"all_patches_pc_scatter.svg")
-# pc_per_method_all_patches(results, PATCH_IDXS,"all_patches_pc_per_method_cumsum.svg")
-#error_all_patches(results, PATCH_IDXS, "all_patches_error_cumsum.svg")
-# coeff_vectors_hist_all_patches(results, PATCH_IDXS, "all_patches_coeffs_hist_full_y.svg" )
+pc_per_method_all_patches(results, PATCH_IDXS,"all_patches_true_pc_per_method.svg")
+# error_all_patches(results, PATCH_IDXS, "all_patches_error_cumsum.svg")
+ # coeff_vectors_hist_all_patches(results, PATCH_IDXS, "all_patches_coeffs_hist_full_y.svg" )
 # coeff_vectors_cdf_all_patches(results, PATCH_IDXS, "all_patches_coeffs_cdf_lim.svg")

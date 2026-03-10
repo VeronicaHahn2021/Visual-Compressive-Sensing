@@ -16,7 +16,7 @@ N_OBS = 256
 ALPHA = 1
 CELL_SIZE = 50
 BLOB_SIZE = 6
-PATCH_IDXS = [58]  # patches to use
+PATCH_IDXS = [58, 169, 206, 233]  # patches to use
 
 NUM_RUNS = 100
 
@@ -57,7 +57,7 @@ for p_idx, patch_idx in enumerate(PATCH_IDXS):
 # Plot the results
 n_rows = 2
 n_cols = 2
-fig, axes = plt.subplots(n_rows, n_cols, figsize=(7, 5), sharey=True)
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 8), sharey=True)
 axes = axes.flatten()
 
 for i, patch_idx in enumerate(PATCH_IDXS):
@@ -76,7 +76,7 @@ for ax in axes[len(PATCH_IDXS):]:
     fig.delaxes(ax)
 
 fig.suptitle(f"Dimensions of Theta over {NUM_RUNS} runs", fontsize=18)
-#plt.tight_layout(rect=[0, 0, 1, 0.95])
+plt.tight_layout(rect=[0, 0, 1, 0.95])
 plt.savefig("Dimensions_all_patches.svg", format="svg", dpi=300)
 plt.close()
 
@@ -87,7 +87,7 @@ patch_idx = 58
 fig, ax = plt.subplots(figsize=(7, 5))  # single patch, good size
 ax.boxplot([dim_arr_V1[0], dim_arr_pix[0], dim_arr_gauss[0]],
            labels=["V1", "Pixel", "Gaussian"])
-ax.set_title(f"Dimension of Theta - Patch {patch_idx}")
+ax.set_title(f"Dimensions of Theta over {NUM_RUNS} runs - Patch {patch_idx}")
 ax.set_ylabel("Dimension of Theta")
 ax.grid(alpha=0.3, axis='y')
 
