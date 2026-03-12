@@ -8,9 +8,9 @@ import sys
 sys.path.append('..')
 from src.compress_sensing import *
 from src.utility import *
-from A_experiments.theta_exp_improved import *
-from A_experiments.exp_constants import *
-from A_experiments.extract_patches import *
+from plots.theta_exp_improved import *
+from plots.extract_patches import *
+from plots.exp_constants import *
 
 
 barbara = process_image("barbara.bmp", color=False)

@@ -9,8 +9,8 @@ import matplotlib.cm as cm
 sys.path.append('..')
 from src.compress_sensing import *
 from src.utility import *
-from A_experiments.extract_patches import *
-from A_experiments.exp_constants import *
+from plots.extract_patches import *
+from plots.exp_constants import *
 
 '''
 Big question associated with this folder: 
@@ -450,7 +450,7 @@ for ax, mat, title in zip(axs, [v1_dot, pix_dot, gauss_dot], ["V1", "Pixel", "Ga
 # one colorbar for all heatmaps
 fig.colorbar(im, ax=axs.ravel().tolist(), shrink=0.6, label="Dot Product Value")
 plt.suptitle("Dot Products", fontsize=15, y=0.98, x = 0.98)
-plt.savefig("Dot_Product_Heatmaps.svg", dpi=300)
+# plt.savefig("Dot_Product_Heatmaps.svg", dpi=300)
 
 # PATCHES CODE -----------------------------------------------------------------------------------
 NUM_CELL = 256

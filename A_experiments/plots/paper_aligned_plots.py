@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 import sys
 import pandas as pd
 
-sys.path.append('..')
+sys.path.append('../../')
 from src.compress_sensing import *
 from src.utility import *
-from A_experiments.theta_exp_improved import *
-from A_experiments.extract_patches import *
-from A_experiments.exp_constants import *
+from plots.theta_exp_improved import *
+from plots.extract_patches import *
+from plots.exp_constants import *
 
 
 def compute_patch_results(patch, n, cell_size, blob_size, alpha):
@@ -176,7 +176,7 @@ def pc_per_method(results, num_obs, patch_idx):
 
     for ax, method in zip(axes, methods):
 
-        components = np.abs(results[num_obs][method]["a_true"])
+        components = np.abs(results[num_obs][method]["a_est"])#TODO: a_true to get bump scatter plot
         ax.scatter(range(len(components)), components, s=10, color='skyblue')
 
         ax.set_xlabel("Rank")
@@ -213,12 +213,6 @@ def cumsum_err(ax, err, label):
     cumsum_err = np.cumsum(err)
     x = np.arange(1, len(err) + 1)
     ax.plot(x, cumsum_err, label=label)
-
-def plot_ranked_errors(ax, err, label):
-    err = np.array(err)
-    sorted_err = np.sort(err)  # ascending order
-    ranks = np.arange(1, len(err) + 1)
-    ax.plot(ranks, sorted_err, label=label)
 
 
 def compare_smoothed_errors(results, num_obs_list, filename, patch_idx):
@@ -621,7 +615,7 @@ def coeff_vectors_cdf_all_patches(results, patch_idxs, filename):
     plt.savefig(filename, format="svg")
     plt.close()
 
-# pc_scatter_plots_all_patches(results,PATCH_IDXS,"all_patches_pc_scatter.svg")
+pc_scatter_plots_all_patches(results,PATCH_IDXS,"all_patches_pc_scatter.svg")
 # pc_per_method_all_patches(results, PATCH_IDXS,"all_patches_true_pc_per_method.svg")
 # error_all_patches(results, PATCH_IDXS, "all_patches_error_cumsum.svg")
 # coeff_vectors_hist_all_patches(results, PATCH_IDXS, "all_patches_coeffs_hist_full_y.svg" )
