@@ -9,21 +9,14 @@ sys.path.append('..')
 from src.compress_sensing import *
 from src.utility import *
 from A_experiments.theta_exp_improved import *
+from A_experiments.exp_constants import *
+from A_experiments.extract_patches import *
 
-# Experiment parameters
-PATCH_SIZE = 32
-N_OBS = 256
-ALPHA = 1
-CELL_SIZE = 50
-BLOB_SIZE = 6
-PATCH_IDXS = [58, 169, 206, 233]  # patches to use
-
-NUM_RUNS = 100
 
 barbara = process_image("barbara.bmp", color=False)
 patches = extract_patches(barbara, PATCH_SIZE)
 
-# Arrays to store dimensions for each method and patch
+# arrays to store dimensions for each method and patch
 dim_arr_V1 = np.zeros((len(PATCH_IDXS), NUM_RUNS))
 dim_arr_pix = np.zeros((len(PATCH_IDXS), NUM_RUNS))
 dim_arr_gauss = np.zeros((len(PATCH_IDXS), NUM_RUNS))
@@ -80,11 +73,10 @@ plt.tight_layout(rect=[0, 0, 1, 0.95])
 plt.savefig("Dimensions_all_patches.svg", format="svg", dpi=300)
 plt.close()
 
-
-# Plot the results for only patch 58
+# patch 58
 patch_idx = 58
 
-fig, ax = plt.subplots(figsize=(7, 5))  # single patch, good size
+fig, ax = plt.subplots(figsize=(7, 5))
 ax.boxplot([dim_arr_V1[0], dim_arr_pix[0], dim_arr_gauss[0]],
            labels=["V1", "Pixel", "Gaussian"])
 ax.set_title(f"Dimensions of Theta over {NUM_RUNS} runs - Patch {patch_idx}")

@@ -9,14 +9,10 @@ sys.path.append('..')
 from src.compress_sensing import *
 from src.utility import *
 from A_experiments.theta_exp_improved import *
-from A_experiments.paper_aligned_plots import *
+from A_experiments.exp_constants import *
+from A_experiments.extract_patches import *
 
-PATCH_SIZE = 32
-CELL_SIZE = 50
-BLOB_SIZE = 6
-ALPHA = 1
 
-PATCH_IDXS = [ 58, 169, 206, 233]
 NUM_OBS_LIST = [256]
 
 img = process_image("barbara.bmp", color=False)
@@ -117,7 +113,7 @@ def plot_SVD(num_plots, patches, savefile):
             axes[i].set_xlabel("Index")
         if (i == 0 or i == 2):
             axes[i].set_ylabel("Singular Value")
-        if (patch_idx == 169 or patch_idx == 235):
+        if (patch_idx == 169 or patch_idx == 233):
             axes[i].tick_params(axis='y', which='both', left=False, labelleft=False)
         axes[i].legend()
         print(i)
@@ -131,7 +127,7 @@ def plot_SVD(num_plots, patches, savefile):
     plt.show()
 
 
-#plot_SVD(256, patches, "SVD_256_patches.svg")
+plot_SVD(256, patches, "SVD_256_patches.svg")
 
 def plot_SVD_single_patch(num_plots, patches, savefile):
 

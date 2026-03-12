@@ -9,7 +9,8 @@ import matplotlib.cm as cm
 sys.path.append('..')
 from src.compress_sensing import *
 from src.utility import *
-#from A_experiments.paper_aligned_plots import extract_patches
+from A_experiments.extract_patches import *
+from A_experiments.exp_constants import *
 
 '''
 Big question associated with this folder: 
@@ -451,29 +452,9 @@ fig.colorbar(im, ax=axs.ravel().tolist(), shrink=0.6, label="Dot Product Value")
 plt.suptitle("Dot Products", fontsize=15, y=0.98, x = 0.98)
 plt.savefig("Dot_Product_Heatmaps.svg", dpi=300)
 
-PATCH_SIZE = 32
-PATCH_IDXS = [ 58, 169, 206, 233]
-
+# PATCHES CODE -----------------------------------------------------------------------------------
 NUM_CELL = 256
-CELL_SIZE = 50
-BLOB_SIZE = 6
-
 NUM_MC_RUNS = 100
-def extract_patches(img, patch_size):
-    '''
-        extract all patch_size x patch_size patches from img
-    '''
-    h, w = img.shape # get width and height
-    patches = []
-    for i in range(0, h, patch_size):
-        for j in range(0, w, patch_size):
-            # get rows i -> i + patch_size (not inclusive)
-            # get colums j -> j + patch_size (not inclusive)
-            patch = img[i:i+patch_size, j:j+patch_size]
-            # make sure that the patch is square
-            if patch.shape == (patch_size, patch_size):
-                patches.append(patch)
-    return patches
 
 img = process_image("barbara.bmp", color=False)
 patches = extract_patches(img, PATCH_SIZE)
@@ -555,7 +536,6 @@ def plot_dot_products_for_patch(patch_idx):
 
 def dot_product_histogram_for_patch(patch_idx, bins=50):
     patch = patches[patch_idx]
-    cmap = cm.get_cmap("tab10", 3)
     colors = ["#2196F3", "#FF6F00", "#43A047"]  # blue, amber, green
 
     obs_types = ["V1", "pixel", "gaussian"]
@@ -565,12 +545,11 @@ def dot_product_histogram_for_patch(patch_idx, bins=50):
 
     for obs, label, color in zip(obs_types, labels, colors):
         dot = dot_product_matrix_from_patch(patch, obs, NUM_CELL)
-        #plt.hist(dot.flatten(), bins, cumulative=False, density=True, label=label, color=color)
         plt.hist(dot.flatten(), bins, density=True,
-                    alpha=0.5,           # lower fill opacity so overlaps show through
+                    alpha=0.5,          
                     color=color,
                     edgecolor=color,
-                    linewidth=1.2,       # crisp outline at full opacity
+                    linewidth=1.2,      
                     label=label)
 
     plt.xlabel("Dot Product")
@@ -585,8 +564,6 @@ def dot_product_histogram_for_patch(patch_idx, bins=50):
 def dot_product_histograms_all_patches(patches, patch_idxs, num_cell, bins=50, filename="DotProductHist_all_patches.svg"):
     obs_types = ["V1", "pixel", "gaussian"]
     labels = ["V1", "Pixel", "Gaussian"]
-
-    # Perceptually distinct, colorblind-friendly colors with good overlap visibility
     colors = ["#2196F3", "#FF6F00", "#43A047"]  # blue, amber, green
 
     n_patches = len(patch_idxs)
@@ -602,10 +579,10 @@ def dot_product_histograms_all_patches(patches, patch_idxs, num_cell, bins=50, f
         for obs, label, color in zip(obs_types, labels, colors):
             dot = dot_product_matrix_from_patch(patch, obs, num_cell)
             ax.hist(dot.flatten(), bins, density=True,
-                    alpha=0.5,           # lower fill opacity so overlaps show through
+                    alpha=0.5,         
                     color=color,
                     edgecolor=color,
-                    linewidth=1.2,       # crisp outline at full opacity
+                    linewidth=1.2,      
                     label=label)
 
         row = i // n_cols
@@ -639,7 +616,6 @@ def plot_dot_products_all_patches(patches, patch_idxs, num_cell, filename="DotPr
 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows), sharey=True)
 
-    # make axes 2D even if n_rows = 1
     if n_rows == 1:
         axes = np.expand_dims(axes, axis=0)
 
@@ -677,7 +653,6 @@ def MC_box_plot_all_patches(patches, patch_idxs, filename="MC_all_patches.svg"):
 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 8), sharey=True)
 
-    # make axes 2D even if n_rows or n_cols = 1
     if n_rows == 1:
         axes = np.expand_dims(axes, axis=0)
     if n_cols == 1:
@@ -701,7 +676,6 @@ def MC_box_plot_all_patches(patches, patch_idxs, filename="MC_all_patches.svg"):
         ax.set_title(f"Patch {patch_idx}")
         ax.grid(alpha=0.4)
 
-    # hide any empty subplot if n_patches is odd
     total_axes = n_rows * n_cols
     for empty_idx in range(n_patches, total_axes):
         row = empty_idx // n_cols
@@ -713,7 +687,7 @@ def MC_box_plot_all_patches(patches, patch_idxs, filename="MC_all_patches.svg"):
     plt.savefig(filename, format="svg", dpi=300)
     plt.close()
 
-#dot_product_histograms_all_patches(patches, PATCH_IDXS, 256)
+# dot_product_histograms_all_patches(patches, PATCH_IDXS, 256)
 # plot_dot_products_all_patches(patches, PATCH_IDXS, 256 )
 # MC_box_plot_all_patches(patches, PATCH_IDXS)
 
@@ -721,54 +695,5 @@ def MC_box_plot_all_patches(patches, patch_idxs, filename="MC_all_patches.svg"):
 # plot_dot_products_for_patch(58)
 # MC_box_plot_for_patch(58)
 
-dot_product_histogram_for_patch(58, bins=50)
-# for pidx in PATCH_IDXS:
-#     MC_box_plot_for_patch(pidx)
-#     plot_dot_products_for_patch(pidx)
-#     dot_product_histogram_for_patch(pidx)
 
-
-
-#Plot Dot Products - WORKING for small_gray
-# v1_dot = dot_product_matrix(small_img_arr_gray, "V1", num_cell_300, cell_size, blob_size)
-# v1_upper_dot = np.triu(v1_dot, k=1)
-# pix_dot = dot_product_matrix(small_img_arr_gray, "pixel", num_cell_300)
-# pix_upper_dot = np.triu(pix_dot, k=1)
-# gaus_dot = dot_product_matrix(small_img_arr_gray, "gaussian", num_cell_300)
-# gaus_upper_dot = np.triu(gaus_dot, k=1)
-
-# bins = np.linspace(0,0.35, 50)
-
-# v1_dot = dot_product_matrix(small_img_arr_gray, "V1", num_cell_300, 10, blob_size)
-# plt.figure()
-# plt.imshow(v1_dot, interpolation=None) #blue to yellow pixel graphs
-# plt.title('Sparse Freq = ' + str(blob_size) + " , Cell Size = " + str(10))
-# plt.colorbar()
-
-# plt.figure()
-# plt.hist(v1_dot.flatten(), bins, cumulative=False, density=True, label='v1')
-# plt.xlabel('Dot Product')
-# plt.ylabel('Frequency')
-# plt.title('Dot Products')
-# plt.yscale('log')
-# #plt.show()
-
-# #plt.figure()
-# plt.hist(pix_dot.flatten(), bins, cumulative=False, density=True, label='pix')
-# plt.xlabel('Dot Product')
-# plt.ylabel('Frequency')
-# #plt.title('Pixel Dot Products')
-# plt.yscale('log')
-# #plt.show()
-
-# #plt.figure()
-# plt.hist(gaus_dot.flatten(), bins, cumulative=False, density=True, label='gauss')
-# plt.xlabel('Dot Product')
-# plt.ylabel('Frequency')
-# #plt.title('Gaussian Dot Products')
-# plt.legend()
-
-# plt.yscale('log')
-
-# plt.show()
  

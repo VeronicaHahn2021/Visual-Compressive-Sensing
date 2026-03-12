@@ -1,82 +1,15 @@
-import os
 import sys
-import numpy as npS
 import matplotlib.pyplot as plt
-from PIL import Image, ImageOps
 import sys
-import seaborn as sns
 import pandas as pd
-
 
 sys.path.append('..')
 from src.compress_sensing import *
 from src.utility import *
 from A_experiments.theta_exp_improved import *
+from A_experiments.extract_patches import *
+from A_experiments.exp_constants import *
 
-
-# patch sizes aand n values from paper
-#  d ∈ {8 × 8,16 × 16,32 × 32}
-#  n ∈ {8,14,20,26,32}, {32,56,80,104,128}, and {128,224,320,416,512}
-# patch_sampling = {
-#     8: [8, 14, 20, 26, 32],
-#     16: [32, 56, 80, 104, 128],
-#     32: [128, 224, 320, 416, 512]
-# }
-
-PATCH_SIZE = 32
-N_OBS = 256
-ALPHA = 1
-CELL_SIZE = 50
-BLOB_SIZE = 6
-'''
-58 = eye
-169 = pattern
-206 = stain 1
-235 = stain 2
-'''
-PATCH_IDXS = [58, 169, 206, 233]
-
-def extract_patches(img, patch_size):
-    '''
-        extract all patch_size x patch_size patches from img
-    '''
-    h, w = img.shape # get width and height
-    patches = []
-    for i in range(0, h, patch_size):
-        for j in range(0, w, patch_size):
-            # get rows i -> i + patch_size (not inclusive)
-            # get colums j -> j + patch_size (not inclusive)
-            patch = img[i:i+patch_size, j:j+patch_size]
-            # make sure that the patch is square
-            if patch.shape == (patch_size, patch_size):
-                patches.append(patch)
-    return patches
-
-def show_patches_grid(patches, cols=16):
-    n_patches = len(patches)
-    rows = (n_patches + cols - 1) // cols
-
-    fig, axes = plt.subplots(rows, cols, figsize=(cols*2, rows*2))
-    axes = axes.flatten()
-
-    # global min and max across all patches for colorbar
-    gray_patches = [p for p in patches if p.ndim == 2]
-    vmin = min(p.min() for p in gray_patches) if gray_patches else 0
-    vmax = max(p.max() for p in gray_patches) if gray_patches else 1
-
-    for ax, patch in zip(axes, patches):
-        if patch.ndim == 2:
-            ax.imshow(patch, cmap='gray', vmin=vmin, vmax=vmax)
-        else:
-            ax.imshow(patch)
-        ax.axis('off')
-
-    for ax in axes[len(patches):]:
-        ax.axis('off')
-
-    plt.tight_layout()
-    fig.savefig("patches.svg")
-    plt.show()
 
 def compute_patch_results(patch, n, cell_size, blob_size, alpha):
     # true coefs of theta
@@ -193,36 +126,46 @@ results = run_selected_patches(patches, PATCH_IDXS)
 '''
 PC's as scatter plots - together
 '''
-def pc_scatter_plots(results, num_obs, filename, patch_idx, cmap='cool',):
+def pc_scatter_plots(results, num_obs, filename, patch_idx, cmap='cool'):
 
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    methods = ["V1", "Pixel", "Gaussian"]
 
-    for ax, method in zip(axes, ["V1", "Pixel", "Gaussian"]):
-        # get estimate and true PCs
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5), layout="constrained")
+
+    # Global min/max across all methods for this patch
+    global_min = np.inf
+    global_max = -np.inf
+    for method in methods:
+        est = np.abs(results[num_obs][method]["a_est"])
+        true = np.abs(results[num_obs][method]["a_true"])
+        combined = np.concatenate([est, true])
+        combined = combined[combined > 0]
+        global_min = min(global_min, combined.min())
+        global_max = max(global_max, combined.max())
+
+    for col, (ax, method) in enumerate(zip(axes, methods)):
         est = results[num_obs][method]["a_est"]
         true = results[num_obs][method]["a_true"]
 
-        # make scatter plot
-        sc = ax.scatter(np.abs(est), np.abs(true), c=np.arange(len(est)), s = 30, cmap=cmap, alpha=0.5)
-
-        # y = x line
-        xmin, xmax = ax.get_xlim()
-        ymin, ymax = ax.get_ylim()
-        low = max(xmin, ymin) # start at largest of the 2 mins, so it doesn't go below
-        high = min(xmax, ymax) # end at smallest of 2 maxima -> doesn't go beyond
-        ax.plot([low, high], [low, high], '--', color='gray')
+        sc = ax.scatter(np.abs(est), np.abs(true), c=np.arange(len(est)), s=30, cmap=cmap, alpha=0.5)
 
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.set_title(f"{method} vs True")
-        ax.set_xlabel("Estimated Principal Component")
-        ax.set_ylabel("True Principal Component")
-        cbar = plt.colorbar(sc, ax=ax)
-        cbar.set_label('PC rank', rotation=270, labelpad=15)
+        ax.set_xlim(global_min, global_max)
+        ax.set_ylim(global_min, global_max)
+        ax.plot([global_min, global_max], [global_min, global_max], '--', color='gray')
+        ax.set_aspect('equal', adjustable='box')
 
-    plt.suptitle(f"True vs Estimated Principal Components - Patch {patch_idx}")
-    plt.tight_layout()
-    plt.savefig(filename)
+        ax.set_title(method, fontsize=18)
+        ax.set_xlabel("Estimated PC", fontsize=14)
+        if col == 0:
+            ax.set_ylabel(f"Patch {patch_idx}\n\nTrue PC", fontsize=18)
+        else:
+            ax.yaxis.set_visible(False)
+
+    fig.colorbar(sc, ax=axes[2], shrink=0.8, label="PC rank")
+    fig.suptitle(f"True vs Estimated Principal Components", fontsize=20)
+    plt.savefig(filename, format="png")
     plt.close()
 
 def pc_per_method(results, num_obs, patch_idx):
@@ -425,13 +368,13 @@ def coeff_vectors_cdf(results, num_obs, patch_idx):
 
 # for patch_idx, patch_results in results.items():
 #     results = {256: patch_results}
-#     pc_per_method(results, 256, patch_idx)
-#     # pc_scatter_plots(results, 256, f"PC_scatter_patch_{patch_idx}.svg", patch_idx)
-#     # compare_smoothed_errors(results, [256], f"smoothed_error_cdf_patch_{patch_idx}.svg", patch_idx)
-#     plot_first_pc(results, num_obs=256,
-#                     title=f"Principal Components per Method  - Patch {patch_idx}",
-#                     fileName=f"pc_top3_images_256_patch_{patch_idx}.png", 
-#     )
+    # pc_per_method(results, 256, patch_idx)
+    # pc_scatter_plots(results, 256, f"PC_scatter_patch_{patch_idx}.png", patch_idx)
+    # compare_smoothed_errors(results, [256], f"smoothed_error_cdf_patch_{patch_idx}.svg", patch_idx)
+    # plot_top_pcs(results, num_obs=256,
+    #                 title=f"Principal Components per Method  - Patch {patch_idx}",
+    #                 fileName=f"pc_top3_images_256_patch_{patch_idx}.png", 
+    # )
     # coeff_vectors_hist(results, 256, patch_idx)
     # coeff_vectors_cdf(results, 256, patch_idx)
 
@@ -678,30 +621,8 @@ def coeff_vectors_cdf_all_patches(results, patch_idxs, filename):
     plt.savefig(filename, format="svg")
     plt.close()
 
-def plot_true_components_all_patches():
-    plt.figure(figsize=(7,5))
-
-    for pidx in PATCH_IDXS:
-        patch = patches[pidx]
-        p = fft.dctn(patch, norm='ortho').flatten()
-        p_sorted = np.sort(np.abs(p))[::-1]
-
-        plt.plot(p_sorted, label=f"Patch {pidx}")
-
-    plt.yscale("log")
-    plt.xlabel("Component Rank")
-    plt.ylabel("|p|")
-    plt.title("True Image Components")
-    plt.legend()
-    plt.grid(alpha=0.3)
-
-    plt.tight_layout()
-    plt.savefig("TrueComponents_all_patches.svg")
-    plt.show()
-
-#plot_true_components_all_patches()
 # pc_scatter_plots_all_patches(results,PATCH_IDXS,"all_patches_pc_scatter.svg")
-pc_per_method_all_patches(results, PATCH_IDXS,"all_patches_true_pc_per_method.svg")
+# pc_per_method_all_patches(results, PATCH_IDXS,"all_patches_true_pc_per_method.svg")
 # error_all_patches(results, PATCH_IDXS, "all_patches_error_cumsum.svg")
- # coeff_vectors_hist_all_patches(results, PATCH_IDXS, "all_patches_coeffs_hist_full_y.svg" )
+# coeff_vectors_hist_all_patches(results, PATCH_IDXS, "all_patches_coeffs_hist_full_y.svg" )
 # coeff_vectors_cdf_all_patches(results, PATCH_IDXS, "all_patches_coeffs_cdf_lim.svg")
