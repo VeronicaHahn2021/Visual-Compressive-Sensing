@@ -453,47 +453,82 @@ plt.suptitle("Dot Products", fontsize=15, y=0.98, x = 0.98)
 # plt.savefig("Dot_Product_Heatmaps.svg", dpi=300)
 
 # PATCHES CODE -----------------------------------------------------------------------------------
+
 NUM_CELL = 256
 NUM_MC_RUNS = 100
 
 img = process_image("barbara.bmp", color=False)
 patches = extract_patches(img, PATCH_SIZE)
 
+
 def design_matrix_from_patch(patch, obs_type, num_cell):
-    '''
-    get design matrix
-    '''
+    """
+    design matric per patch
+
+    Args:
+        patch (ndarray): 
+            2D image patch.
+        obs_type (str): 
+            Measurement strategy — ['V1', 'pixel', or 'gaussian]
+        num_cell (int): 
+            Number of observations to generate.
+
+    Returns:
+        ndarray: 
+            Design matrix
+    """
     if obs_type == "V1":
-        # get observations
-        W, _ = generate_V1_observation(
-            patch, num_cell, CELL_SIZE, BLOB_SIZE, None
-        )
+        W, _ = generate_V1_observation(patch, num_cell, CELL_SIZE, BLOB_SIZE, None)
     elif obs_type == "pixel":
         W, _ = generate_pixel_observation(patch, num_cell)
     elif obs_type == "gaussian":
         W, _ = generate_gaussian_observation(patch, num_cell)
     else:
-        return 
-    # get design matrix
+        return None
     return generate_design_matrix(W)
 
+
 def mutual_coherence_runs(patch, obs_type, num_cell, n_runs):
+    """
+    Repeatedly compute mutual coherence for a single patch to build a distribution
+    over the randomness in the measurement process.
+
+    Args:
+        patch (ndarray): 
+            2D image patch.
+        obs_type (str): 
+            Measurement strategy — ['V1', 'pixel', or 'gaussian'].
+        num_cell (int): 
+            Number of observations per run.
+        n_runs (int): 
+            Number of independent MC samples to collect.
+
+    Returns:
+        ndarray: Array of shape (n_runs,) containing one mutual coherence value per run.
+    """
     M = np.zeros(n_runs)
     for i in range(n_runs):
         A = design_matrix_from_patch(patch, obs_type, num_cell)
         M[i] = compute_mutual_coherence(A)
     return M
 
+
 def MC_box_plot_for_patch(patch_idx):
+    """
+    Plot a box plot comparing the mutual coherence distributions of V1, Pixel, and
+    Gaussian measurements for a single patch, over NUM_MC_RUNS repeated samples.
+
+    Args:
+        patch_idx (int): Index into the global 'patches' list.
+    """
     patch = patches[patch_idx]
 
-    mc_v1 = mutual_coherence_runs(patch, "V1", NUM_CELL, NUM_MC_RUNS)
-    mc_pix = mutual_coherence_runs(patch, "pixel", NUM_CELL, NUM_MC_RUNS)
+    mc_v1   = mutual_coherence_runs(patch, "V1", NUM_CELL, NUM_MC_RUNS)
+    mc_pix  = mutual_coherence_runs(patch, "pixel",NUM_CELL, NUM_MC_RUNS)
     mc_gauss = mutual_coherence_runs(patch, "gaussian", NUM_CELL, NUM_MC_RUNS)
 
     plt.figure(figsize=(7, 5))
-    plt.boxplot([mc_v1, mc_pix, mc_gauss],
-                labels=["V1", "Pixel", "Gaussian"])
+    plt.boxplot([mc_v1, mc_pix, mc_gauss], labels=["V1", "Pixel", "Gaussian"])
     plt.ylabel("Mutual Coherence")
     plt.title(f"Mutual Coherence (Patch {patch_idx}, {NUM_CELL} obs)")
     plt.grid(alpha=0.4)
@@ -501,7 +536,22 @@ def MC_box_plot_for_patch(patch_idx):
     plt.savefig(f"MC_patch_{patch_idx}.svg")
     plt.show()
 
+
 def dot_product_matrix_from_patch(patch, obs_type, num_cell):
+    """
+    dot products for each patch
+
+    Args:
+        patch (ndarray): 
+            2D image patch.
+        obs_type (str): 
+            Measurement strategy — one of 'V1', 'pixel', or 'gaussian'.
+        num_cell (int): 
+            Number of observations to generate.
+
+    Returns:
+        ndarray: Dot products.
+    """
     A = design_matrix_from_patch(patch, obs_type, num_cell)
     col_norms = np.linalg.norm(A, axis=0)
     A_hat = A / col_norms
@@ -509,15 +559,21 @@ def dot_product_matrix_from_patch(patch, obs_type, num_cell):
     np.fill_diagonal(G, 0)
     return np.abs(G)
 
+
 def plot_dot_products_for_patch(patch_idx):
+    """
+    Plot dot products per patch.
+
+    Args:
+        patch_idx (int): Index into the 'patches' list.
+    """
     patch = patches[patch_idx]
 
     mats = [
-        dot_product_matrix_from_patch(patch, "V1", NUM_CELL),
-        dot_product_matrix_from_patch(patch, "pixel", NUM_CELL),
+        dot_product_matrix_from_patch(patch, "V1",      NUM_CELL),
+        dot_product_matrix_from_patch(patch, "pixel",   NUM_CELL),
         dot_product_matrix_from_patch(patch, "gaussian", NUM_CELL),
     ]
-
     titles = ["V1", "Pixel", "Gaussian"]
 
     fig, axs = plt.subplots(1, 3, figsize=(18, 5))
@@ -527,30 +583,39 @@ def plot_dot_products_for_patch(patch_idx):
         ax.set_xlabel("Column index")
         ax.set_ylabel("Column index")
 
+    # Single shared colorbar attached to the rightmost subplot
     fig.colorbar(im, ax=axs.ravel().tolist(), shrink=0.6)
     plt.suptitle(f"Dot Products – Patch {patch_idx}", y=0.98)
-    #plt.tight_layout()
     plt.savefig(f"DotProducts_patch_{patch_idx}.svg")
     plt.show()
 
 
 def dot_product_histogram_for_patch(patch_idx, bins=50):
+    """
+    Dot product histograms
+
+    Args:
+        patch_idx (int): 
+            Index into the global 'patches' list.
+        bins (int): 
+            Number of histogram bins. Default 50.
+    """
     patch = patches[patch_idx]
     colors = ["#2196F3", "#FF6F00", "#43A047"]  # blue, amber, green
 
     obs_types = ["V1", "pixel", "gaussian"]
-    labels = ["V1", "Pixel", "Gaussian"]
+    labels    = ["V1", "Pixel", "Gaussian"]
 
     plt.figure(figsize=(7, 5))
 
     for obs, label, color in zip(obs_types, labels, colors):
         dot = dot_product_matrix_from_patch(patch, obs, NUM_CELL)
         plt.hist(dot.flatten(), bins, density=True,
-                    alpha=0.5,          
-                    color=color,
-                    edgecolor=color,
-                    linewidth=1.2,      
-                    label=label)
+                 alpha=0.5,
+                 color=color,
+                 edgecolor=color,
+                 linewidth=1.2,
+                 label=label)
 
     plt.xlabel("Dot Product")
     plt.ylabel("Density")
@@ -561,10 +626,26 @@ def dot_product_histogram_for_patch(patch_idx, bins=50):
     plt.savefig(f"DotProductHist_patch_{patch_idx}.svg")
     plt.show()
 
+
 def dot_product_histograms_all_patches(patches, patch_idxs, num_cell, bins=50, filename="DotProductHist_all_patches.svg"):
+    """
+    Dot product historgrams for all patches
+
+    Args:
+        patches (list[ndarray]): 
+            Full list of extracted image patches.
+        patch_idxs (list[int]): 
+            Patch indices to include.
+        num_cell (int): 
+            Number of observations per patch.
+        bins (int): 
+            Number of histogram bins. Default 50.
+        filename (str): Output path for the saved SVG. Default
+            "DotProductHist_all_patches.svg".
+    """
     obs_types = ["V1", "pixel", "gaussian"]
-    labels = ["V1", "Pixel", "Gaussian"]
-    colors = ["#2196F3", "#FF6F00", "#43A047"]  # blue, amber, green
+    labels    = ["V1", "Pixel", "Gaussian"]
+    colors    = ["#2196F3", "#FF6F00", "#43A047"]  # blue, amber, green
 
     n_patches = len(patch_idxs)
     n_cols = 2
@@ -576,13 +657,14 @@ def dot_product_histograms_all_patches(patches, patch_idxs, num_cell, bins=50, f
     for i, patch_idx in enumerate(patch_idxs):
         ax = axes[i]
         patch = patches[patch_idx]
+
         for obs, label, color in zip(obs_types, labels, colors):
             dot = dot_product_matrix_from_patch(patch, obs, num_cell)
             ax.hist(dot.flatten(), bins, density=True,
-                    alpha=0.5,         
+                    alpha=0.5,
                     color=color,
                     edgecolor=color,
-                    linewidth=1.2,      
+                    linewidth=1.2,
                     label=label)
 
         row = i // n_cols
@@ -606,10 +688,26 @@ def dot_product_histograms_all_patches(patches, patch_idxs, num_cell, bins=50, f
     plt.savefig(filename, format="svg", dpi=300)
     plt.close()
 
+
 def plot_dot_products_all_patches(patches, patch_idxs, num_cell, filename="DotProducts_all_patches.svg"):
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    """
+    Dot products for all patches.
+
+    Args:
+        patches (list[ndarray]): 
+            Full list of extracted image patches.
+        patch_idxs (list[int]): 
+            Patch indices to include as rows.
+        num_cell (int): 
+            Number of observations per patch.
+        filename (str): 
+            Output path for the saved SVG. Default
+            "DotProducts_all_patches.svg".
+    """
+    from mpl_toolkits.axes_grid1 import make_axes_locatable # for color bar
+
     obs_types = ["V1", "pixel", "gaussian"]
-    titles = ["V1", "Pixel", "Gaussian"]
+    titles    = ["V1", "Pixel", "Gaussian"]
 
     n_rows = len(patch_idxs)
     n_cols = len(obs_types)
@@ -621,12 +719,10 @@ def plot_dot_products_all_patches(patches, patch_idxs, num_cell, filename="DotPr
 
     for row, patch_idx in enumerate(patch_idxs):
         patch = patches[patch_idx]
-        ims = []
         for col, obs in enumerate(obs_types):
             mat = dot_product_matrix_from_patch(patch, obs, num_cell)
-            ax = axes[row, col]
-            im = ax.imshow(mat, cmap="viridis")
-            ims.append(im)
+            ax  = axes[row, col]
+            im  = ax.imshow(mat, cmap="viridis")
 
             if row == 0:
                 ax.set_title(titles[col], fontsize=12)
@@ -637,19 +733,32 @@ def plot_dot_products_all_patches(patches, patch_idxs, num_cell, filename="DotPr
             if col != 0:
                 ax.tick_params(axis='y', which='both', left=False, labelleft=False)
 
+        # add a per-row colorbar to the right of the last column
         divider = make_axes_locatable(axes[row, -1])
         cax = divider.append_axes("right", size="5%", pad=0.1)
         fig.colorbar(im, cax=cax)
-        
+
     fig.suptitle("Dot Products", fontsize=16, y=0.98)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(filename, format="svg", dpi=300)
     plt.close()
 
+
 def MC_box_plot_all_patches(patches, patch_idxs, filename="MC_all_patches.svg"):
+    """
+    MC box plot for all patches.
+
+    Args:
+        patches (list[ndarray]): 
+            Full list of extracted image patches.
+        patch_idxs (list[int]): 
+            Patch indices to include.
+        filename (str): 
+            Output path for the saved SVG. Default "MC_all_patches.svg".
+    """
     n_patches = len(patch_idxs)
     n_cols = 2
-    n_rows = (n_patches + 1) // n_cols  # 2 rows for 4 patches
+    n_rows = (n_patches + 1) // n_cols
 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 8), sharey=True)
 
@@ -661,11 +770,11 @@ def MC_box_plot_all_patches(patches, patch_idxs, filename="MC_all_patches.svg"):
     for idx, patch_idx in enumerate(patch_idxs):
         row = idx // n_cols
         col = idx % n_cols
-        ax = axes[row, col]
+        ax  = axes[row, col]
 
-        patch = patches[patch_idx]
-        mc_v1 = mutual_coherence_runs(patch, "V1", NUM_CELL, NUM_MC_RUNS)
-        mc_pix = mutual_coherence_runs(patch, "pixel", NUM_CELL, NUM_MC_RUNS)
+        patch    = patches[patch_idx]
+        mc_v1    = mutual_coherence_runs(patch, "V1", NUM_CELL, NUM_MC_RUNS)
+        mc_pix   = mutual_coherence_runs(patch, "pixel", NUM_CELL, NUM_MC_RUNS)
         mc_gauss = mutual_coherence_runs(patch, "gaussian", NUM_CELL, NUM_MC_RUNS)
 
         ax.boxplot([mc_v1, mc_pix, mc_gauss], labels=["V1", "Pixel", "Gaussian"])
@@ -678,22 +787,19 @@ def MC_box_plot_all_patches(patches, patch_idxs, filename="MC_all_patches.svg"):
 
     total_axes = n_rows * n_cols
     for empty_idx in range(n_patches, total_axes):
-        row = empty_idx // n_cols
-        col = empty_idx % n_cols
-        axes[row, col].axis('off')
+        axes[empty_idx // n_cols, empty_idx % n_cols].axis('off')
 
-    fig.suptitle(f"Mutual Coherence", fontsize=16)
+    fig.suptitle("Mutual Coherence", fontsize=16)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(filename, format="svg", dpi=300)
     plt.close()
 
+# TODO: all patches
 # dot_product_histograms_all_patches(patches, PATCH_IDXS, 256)
-# plot_dot_products_all_patches(patches, PATCH_IDXS, 256 )
+# plot_dot_products_all_patches(patches, PATCH_IDXS, 256)
 # MC_box_plot_all_patches(patches, PATCH_IDXS)
 
+# TODO: single patch
 # dot_product_histogram_for_patch(58, bins=50)
 # plot_dot_products_for_patch(58)
 # MC_box_plot_for_patch(58)
-
-
- 

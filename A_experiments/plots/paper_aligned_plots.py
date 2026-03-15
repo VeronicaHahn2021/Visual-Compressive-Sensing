@@ -3,13 +3,21 @@ import matplotlib.pyplot as plt
 import sys
 import pandas as pd
 
-sys.path.append('../../')
+sys.path.append('../')
 from src.compress_sensing import *
 from src.utility import *
-from theta_exp_improved import *
-from extract_patches import *
-from exp_constants import *
+from plots.theta_exp_improved import *
+from plots.extract_patches import *
+from plots.exp_constants import *
 
+'''
+PLOTS: 
+    - est pcs vs true pcs scatter 
+    - est pcs vs rank 
+    - pc error
+    - pcs as images 
+    - coefficient hists
+''' 
 
 def compute_patch_results(patch, n, cell_size, blob_size, alpha):
     """
